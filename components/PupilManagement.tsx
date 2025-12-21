@@ -132,7 +132,7 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
           <div className="space-y-8">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-black text-[#0f3460] uppercase">Admission Assessment Desk</h3>
-              <button onClick={deleteStale} className="text-red-400 font-bold text-[10px] uppercase hover:underline">Clear Stale Apps (>1 Month)</button>
+              <button onClick={deleteStale} className="text-red-400 font-bold text-[10px] uppercase hover:underline">Clear Stale Apps (&gt;1 Month)</button>
             </div>
             <div className="grid grid-cols-1 gap-6">
               {applicants.filter(a => a.status === 'Pending' || a.status === 'Scheduled').map(a => (
