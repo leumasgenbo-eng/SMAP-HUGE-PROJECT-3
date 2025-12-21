@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { GlobalSettings, ObservationSlot } from '../types';
+import { GlobalSettings, ObservationScheduleSlot } from '../types';
 import { DAYCARE_ACTIVITY_GROUPS, DAYCARE_VENUES } from '../constants';
 
 interface Props {
@@ -11,21 +11,24 @@ interface Props {
 }
 
 const ObservationSchedule: React.FC<Props> = ({ settings, onSettingsChange, activeClass, notify }) => {
-  const schedule = settings.observationSchedules[activeClass] || [];
+  // Fixed: Updated property name from observationSchedules to observationSchedule to match GlobalSettings
+  const schedule = settings.observationSchedule[activeClass] || [];
   const indicatorList = Object.values(DAYCARE_ACTIVITY_GROUPS).flat();
 
   const handleAddObservation = () => {
-    const newObs: ObservationSlot = {
+    const newObs: ObservationScheduleSlot = {
+      id: crypto.randomUUID(),
       date: '', period: 'L1', duration: '45 mins', venue: DAYCARE_VENUES[0],
-      observer: 'Supervisor', observedPupils: [], activity: indicatorList[0]
+      observerId: 'Supervisor', pupilGroup: [], activityIndicator: indicatorList[0],
+      status: 'Pending'
     };
-    onSettingsChange({ ...settings, observationSchedules: { ...settings.observationSchedules, [activeClass]: [...schedule, newObs] } });
+    onSettingsChange({ ...settings, observationSchedule: { ...settings.observationSchedule, [activeClass]: [...schedule, newObs] } });
   };
 
-  const updateObs = (idx: number, field: keyof ObservationSlot, val: any) => {
+  const updateObs = (idx: number, field: keyof ObservationScheduleSlot, val: any) => {
     const updated = [...schedule];
     updated[idx] = { ...updated[idx], [field]: val };
-    onSettingsChange({ ...settings, observationSchedules: { ...settings.observationSchedules, [activeClass]: updated } });
+    onSettingsChange({ ...settings, observationSchedule: { ...settings.observationSchedule, [activeClass]: updated } });
   };
 
   return (
@@ -63,17 +66,17 @@ const ObservationSchedule: React.FC<Props> = ({ settings, onSettingsChange, acti
                   </td>
                   <td className="p-4">
                     <select value={obs.venue} onChange={e => updateObs(idx, 'venue', e.target.value)} className="bg-transparent border-b outline-none">
-                      {DAYCARE_VENUES.map(v => <option key={v}>{v}</option>)}
+                      {DAYCARE_VENUES.map(v => <option key={v} value={v}>{v}</option>)}
                     </select>
                   </td>
                   <td className="p-4">
-                    <select value={obs.activity} onChange={e => updateObs(idx, 'activity', e.target.value)} className="bg-transparent border-b outline-none w-48 font-black">
+                    <select value={obs.activityIndicator} onChange={e => updateObs(idx, 'activityIndicator', e.target.value)} className="bg-transparent border-b outline-none w-48 font-black">
                       {indicatorList.map(i => <option key={i}>{i}</option>)}
                     </select>
                   </td>
-                  <td className="p-4 font-bold text-gray-500">{obs.observer}</td>
+                  <td className="p-4 font-bold text-gray-500">{obs.observerId}</td>
                   <td className="p-4 text-center">
-                    {isLapsed ? <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter">Task Incomplete</span> : <span className="text-gray-300 font-black">PENDING</span>}
+                    {isLapsed ? <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter">Task Incomplete</span> : <span className="text-gray-300 font-black">{obs.status.toUpperCase()}</span>}
                   </td>
                 </tr>
               );

@@ -29,6 +29,84 @@ export interface AdmissionTestInfo {
   decision?: 'Retain' | 'Repeat Lower' | 'Skip Higher' | 'Pending Placement';
 }
 
+export interface FilingRecord {
+  id: string;
+  name: string;
+  type: string;
+  date: string;
+}
+
+export interface StaffRecord {
+  id: string;
+  name: string;
+  role: string;
+  contact: string;
+  category: string;
+  department: string;
+  idNumber: string;
+}
+
+export interface Challenge {
+  id: string;
+  text: string;
+  subjectId: string;
+  count: number;
+}
+
+export interface InvigilatorSlot {
+  date: string;
+  time: string;
+  name: string;
+  role: string;
+  subject: string;
+  venue: string;
+  confirmed: boolean;
+}
+
+export interface DaycareTimeTableSlot {
+  code: string;
+  time: string;
+  activity: string;
+  subject: string;
+  detail: string;
+  tlm: string;
+  remark: string;
+}
+
+export interface LessonPlanAssessment {
+  teacherId?: string;
+  subject?: string;
+  topic?: string;
+  date?: string;
+  week?: number;
+  strand?: string;
+  subStrand?: string;
+  schemeOfWorkStatus?: 'Complete' | 'Incomplete';
+  referenceMaterialsCount?: number;
+  scores?: Record<string, number>;
+  checklists?: Record<string, boolean>;
+  quantitative?: {
+    alignment: number;
+    strategy: number;
+    assessment: number;
+    time: number;
+    engagement: number;
+  };
+  qualitative?: {
+    strengths: string;
+    improvements: string;
+    behaviors: string;
+    patterns: string;
+  };
+  reflective?: {
+    evidence: boolean;
+    feedbackUse: boolean;
+    adjustmentWillingness: boolean;
+  };
+  overallEvaluation?: 'Lesson meets professional standards' | 'Lesson requires improvement' | 'Re-teaching recommended' | 'Follow-up observation required' | string;
+  status: 'Draft' | 'Finalized';
+}
+
 export interface Student {
   id: string;
   serialId: string;
@@ -53,143 +131,39 @@ export interface Student {
     total: number; 
     grade: string; 
     facilitatorRemark?: string;
-    sectionA?: number; // Maps to Average Daily Score (Indicator %) for EC
-    sectionB?: number; // Maps to Exam Score (Observation) for EC
+    sectionA?: number; // CAT 1 or Indicator Avg
+    sectionB?: number; // CAT 3 or Observation Score
+    sectionC?: number; // CAT 2 (Group)
+    dailyScores?: Record<string, number>; // Date -> Score
   }>;
   attendance: Record<string, Record<string, string>>;
   recommendation?: string;
   overallRemark?: string;
   finalRemark?: string;
+  payments?: Record<string, any>;
 }
 
-export interface StaffRecord {
-  id: string;
-  fullName: string;
-  bioData: string;
-  demographics: string;
-  certifications: string[];
-  professionalQualification: string;
-  department: string;
-  classes: string[];
-  subjects: string[];
-  employmentType: 'Full-Time' | 'Part-Time';
-  roles: ('Facilitator' | 'Invigilator' | 'Guest' | 'Supervisor' | 'Non-Teaching')[];
-  skills: string[];
-  jobDescription?: string;
-  dutyPost?: string;
-  attendanceLog: Record<string, { status: string; checkIn: string; checkOut: string; notes: string }>;
-}
-
-export interface ExamTimeTableSlot {
-  date: string;
-  time: string;
-  subject: string;
-  venue: string;
-  duration: string;
-  isBreak?: boolean;
-}
-
-export interface InvigilatorSlot {
-  date: string;
-  time: string;
-  name: string;
-  role: 'Chief Invigilator' | 'Invigilator' | 'Officer';
-  subject: string;
-  venue: string;
-  confirmed: boolean;
-}
-
-export interface LessonPlanAssessment {
-  id: string;
-  teacherId: string;
-  subject: string;
-  topic: string;
-  date: string;
-  week: number;
-  duration: string;
-  strand: string;
-  subStrand: string;
-  indicator: string;
-  classSize: number;
-  schemeOfWorkStatus: 'Complete' | 'Incomplete';
-  referenceMaterialsCount: number;
-  supervisor: string;
-  scores: Record<string, number>; // Section E Rubric (0-4)
-  checklists: Record<string, boolean>; // Sections B & C
-  quantitative: {
-    alignment: number;
-    strategy: number;
-    assessment: number;
-    time: number;
-    engagement: number;
-  };
-  qualitative: {
-    strengths: string;
-    improvements: string;
-    behaviors: string;
-    patterns: string;
-  };
-  reflective: {
-    evidence: boolean;
-    feedbackUse: boolean;
-    adjustmentWillingness: boolean;
-  };
-  overallEvaluation: 'Meets Standards' | 'Requires Improvement' | 'Re-teaching Recommended' | 'Follow-up Required';
-  status: 'Draft' | 'Final';
-}
-
-export interface DailyExerciseEntry {
-  id: string;
-  subject: string;
-  week: number;
-  strand: string;
-  subStrand: string;
-  indicator: string;
-  date: string;
-  type: 'Classwork' | 'Homework' | 'Project';
-  pupilStatus: Record<string, 'Marked' | 'Defaulter' | 'Missing'>;
-  handwritingRating: number; // 1-10
-  spellingCount: number; // Correct spellers
-  clarityRating: number; // 1-10
-  bloomTaxonomy: string[];
-  hasTestItemPrepared: boolean;
-  isLateSubmission: boolean;
-}
-
-export interface ObservationSlot {
-  date: string;
-  period: string;
-  duration: string;
-  venue: string;
-  observer: string;
-  observedPupils: string[];
-  activity: string;
-}
-
-export interface FilingRecord {
-  id: string;
-  name: string;
-  type: 'folder' | 'file';
-  children?: FilingRecord[];
-}
-
-export interface AcademicCalendarWeek {
-  week: string;
-  dateFrom: string;
-  dateTo: string;
-  mainActivity: string;
-  leadTeam: string;
-  extraCurricular: string;
-}
-
-export interface DaycareTimeTableSlot {
-  code: string;
-  time: string;
-  activity: string;
-  subject: string;
-  detail: string;
-  tlm: string;
+export interface EarlyChildhoodGradeRange {
+  label: string;
+  min: number;
+  max: number;
+  color: string;
   remark: string;
+}
+
+export interface EarlyChildhoodGradingConfig {
+  type: 3 | 5 | 9;
+  ranges: EarlyChildhoodGradeRange[];
+}
+
+export interface SBAConfig {
+  cat1Date: string;
+  cat2Date: string;
+  cat3Date: string;
+  cat1Marks: number;
+  cat2Marks: number;
+  cat3Marks: number;
+  questionType: string;
 }
 
 export interface GlobalSettings {
@@ -207,17 +181,24 @@ export interface GlobalSettings {
   academicCalendar: Record<number, AcademicCalendarWeek[]>;
   daycareTimeTable: Record<string, Record<string, DaycareTimeTableSlot[]>>;
   examTimeTables: Record<string, ExamTimeTableSlot[]>;
-  invigilatorsList: InvigilatorSlot[];
-  observationSchedules: Record<string, ObservationSlot[]>;
-  observersList: Array<{ name: string; role: string; active: boolean }>;
-  exerciseEntries: DailyExerciseEntry[];
-  lessonPlans: LessonPlanAssessment[];
+  classTimeTables: Record<string, Record<string, string[]>>; 
+  invigilators: InvigilatorEntry[];
+  observers: ObserverEntry[];
+  staff: StaffRecord[];
+  observationSchedule: Record<string, ObservationScheduleSlot[]>;
+  activeDevelopmentIndicators: string[];
+  customSubjects: string[];
+  disabledSubjects: string[];
   questionBank: Record<string, Record<string, string>>;
   promotionConfig: {
     passCutOffGrade: number;
     exceptionalCutOffGrade: number;
     expectedAttendanceRate: number;
     averageClassSize: number;
+  };
+  earlyChildhoodGrading: {
+    core: EarlyChildhoodGradingConfig;
+    indicators: EarlyChildhoodGradingConfig;
   };
   popoutLists: {
     activities: string[];
@@ -231,6 +212,78 @@ export interface GlobalSettings {
   facilitatorMapping: Record<string, string>;
   submittedSubjects: string[];
   activeIndicators: string[];
+  exerciseEntries?: DailyExerciseEntry[];
+  sbaConfigs: Record<string, Record<string, SBAConfig>>;
+}
+
+export interface AcademicCalendarWeek {
+  week: string;
+  dateFrom: string;
+  dateTo: string;
+  mainActivity: string;
+  leadTeam: string;
+  extraCurricular: string;
+}
+
+export interface DailyExerciseEntry {
+  id: string;
+  subject: string;
+  week: number;
+  date: string;
+  type: 'Classwork' | 'Homework' | 'Project';
+  strand: string;
+  subStrand: string;
+  indicator: string;
+  bloomTaxonomy: string[];
+  handwritingRating: number;
+  clarityRating: number;
+  appearanceRating: number;
+  spellingCount?: number;
+  hasTestItemPrepared: boolean;
+  confirmedWithPupilId?: string;
+  pupilStatus: Record<string, 'Marked' | 'Defaulter' | 'Missing'>;
+  isLateSubmission: boolean;
+}
+
+export interface ExamTimeTableSlot {
+  id: string;
+  date: string;
+  time: string;
+  subject: string;
+  venue: string;
+  duration: string;
+  isBreak: boolean;
+}
+
+export interface InvigilatorEntry {
+  id: string;
+  date: string;
+  time: string;
+  facilitatorName: string;
+  role: 'Chief Invigilator' | 'Invigilator' | 'Officer';
+  subject: string;
+  venue: string;
+  confirmed: boolean;
+}
+
+export interface ObserverEntry {
+  id: string;
+  name: string;
+  role: 'Supervisory' | 'Facilitator' | 'Facilitator Assistant' | 'Caregiver' | 'Guest Resource';
+  active: boolean;
+  staffId?: string;
+}
+
+export interface ObservationScheduleSlot {
+  id: string;
+  date: string;
+  period: string;
+  duration: string;
+  venue: string;
+  observerId: string;
+  pupilGroup: string[];
+  activityIndicator: string;
+  status: 'Pending' | 'Completed' | 'Postponed' | 'Cancelled';
 }
 
 export interface Pupil {
@@ -261,11 +314,4 @@ export interface GradingScale {
   zScore: number;
   remark: string;
   color: string;
-}
-
-export interface Challenge {
-  id: string;
-  subjectId: string;
-  text: string;
-  count: number;
 }

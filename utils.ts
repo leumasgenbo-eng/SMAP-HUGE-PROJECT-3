@@ -1,5 +1,5 @@
 
-import { GradingScale, Student, Pupil, GlobalSettings, FacilitatorStats } from './types';
+import { GradingScale, Student, Pupil, GlobalSettings, FacilitatorStats, EarlyChildhoodGradingConfig } from './types';
 import { CORE_SUBJECTS } from './constants';
 
 export const NRT_SCALE: GradingScale[] = [
@@ -43,11 +43,7 @@ export function getNRTGrade(score: number, mean: number, stdDev: number, customR
 
 export function processStudentData(students: Student[], settings: GlobalSettings, subjectList: string[]): Pupil[] {
   const stats = subjectList.map(subj => {
-    const scores = students.map(s => {
-      const details = s.scoreDetails?.[subj];
-      if (!details) return 0;
-      return details.total;
-    });
+    const scores = students.map(s => (s.scoreDetails?.[subj]?.total || 0));
     return { name: subj, ...calculateStats(scores) };
   });
 
@@ -69,7 +65,6 @@ export function processStudentData(students: Student[], settings: GlobalSettings
       };
     }).sort((a, b) => b.score - a.score);
 
-    // Aggregate: 4 best core + 2 best electives
     const cores = computedScores.filter(sc => sc.isCore).sort((a, b) => a.gradeValue - b.gradeValue).slice(0, 4);
     const electives = computedScores.filter(sc => !sc.isCore).sort((a, b) => a.gradeValue - b.gradeValue).slice(0, 2);
     
@@ -84,15 +79,6 @@ export function processStudentData(students: Student[], settings: GlobalSettings
     else if (aggregate <= 30) { catCode = 'S1'; cat = 'Silver Achiever'; }
     else if (aggregate <= 45) { catCode = 'B1'; cat = 'Bronze Competent'; }
 
-    // Remarks & Weaknesses
-    const weakSubjects = computedScores.filter(sc => sc.gradeValue >= 7).map(sc => sc.name);
-    const weaknessAnalysis = weakSubjects.length > 0 
-      ? `Critical weakness observed in: ${weakSubjects.join(", ")}. Needs immediate focus here.` 
-      : "No significant weaknesses observed in core performance areas.";
-
-    const automatedRemark = `Performance analysis indicates a ${cat.toLowerCase()} standing. ${weaknessAnalysis} This prep session is partial preparation for BECE 2025/2026.`;
-    
-    // Fixed attendance calculation to sum present days for the current term to match Pupil.attendance string type
     const termAttendance = s.attendance?.[settings.currentTerm] || {};
     const presentCount = Object.values(termAttendance).filter(status => status === 'P').length;
 
@@ -107,8 +93,8 @@ export function processStudentData(students: Student[], settings: GlobalSettings
       categoryCode: catCode,
       category: cat,
       computedScores,
-      overallRemark: s.finalRemark || automatedRemark,
-      recommendation: s.recommendation || "Maintain consistency in studies and attend all review sessions.",
+      overallRemark: s.finalRemark || `Performance is ${cat.toLowerCase()}.`,
+      recommendation: s.recommendation || "Continue with intensive review.",
       attendance: presentCount.toString()
     };
   });
@@ -133,23 +119,18 @@ export function calculateFacilitatorStats(students: Student[], settings: GlobalS
 
   const pupilsCount = students.length || 1;
   const performancePercentage = (1 - (totalWeightedValue / (pupilsCount * 9))) * 100;
-
-  // Grade facilitator based on the average grade value
   const avgGradeValue = Math.round(totalWeightedValue / pupilsCount);
   const facilitatorGrade = NRT_SCALE.find(s => s.value === avgGradeValue)?.grade || "F9";
 
-  return {
-    subject,
-    facilitator,
-    distribution,
-    totalPupils: students.length,
-    performancePercentage,
-    grade: facilitatorGrade
-  };
+  return { subject, facilitator, distribution, totalPupils: students.length, performancePercentage, grade: facilitatorGrade };
 }
 
-export function getDaycareGrade(score: number) {
-  if (score >= 70) return { grade: 'G', label: 'Gold', color: '#ffd700' };
-  if (score >= 40) return { grade: 'S', label: 'Silver', color: '#c0c0c0' };
-  return { grade: 'B', label: 'Bronze', color: '#cd7f32' };
+export function getDaycareGrade(score: number, config: EarlyChildhoodGradingConfig) {
+  const range = config.ranges.find(r => score >= r.min && score <= r.max);
+  return range || { label: '?', min: 0, max: 0, color: '#ccc', remark: 'Unknown' };
+}
+
+export function getObservationRating(points: number, config: EarlyChildhoodGradingConfig) {
+  const range = config.ranges.find(r => points >= r.min && points <= r.max);
+  return range || { label: '?', min: 0, max: 0, color: '#ccc', remark: 'Unknown' };
 }

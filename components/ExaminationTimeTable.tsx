@@ -16,9 +16,16 @@ const ExaminationTimeTable: React.FC<Props> = ({ settings, onSettingsChange, act
   const classExamTable = settings.examTimeTables[activeClass] || [];
   const subjectList = getSubjectsForDepartment(department);
 
+  // Fixed: Added missing properties id and isBreak to satisfy ExamTimeTableSlot interface
   const handleAddSlot = () => {
     const newSlot: ExamTimeTableSlot = {
-      date: '', time: '', subject: subjectList[0], venue: EXAM_VENUES[0], duration: '2 hours'
+      id: crypto.randomUUID(),
+      date: '', 
+      time: '', 
+      subject: subjectList[0], 
+      venue: EXAM_VENUES[0], 
+      duration: '2 hours',
+      isBreak: false
     };
     const updated = { ...settings.examTimeTables, [activeClass]: [...classExamTable, newSlot] };
     onSettingsChange({ ...settings, examTimeTables: updated });
@@ -29,7 +36,7 @@ const ExaminationTimeTable: React.FC<Props> = ({ settings, onSettingsChange, act
     updatedTable[idx] = { ...updatedTable[idx], [field]: val };
     
     // Check Max 3 papers rule
-    const dateCount = updatedTable.filter(s => s.date === updatedTable[idx].date).length;
+    const dateCount = updatedTable.filter(s => s.date === updatedTable[idx].date && !s.isBreak).length;
     if (dateCount > 3) {
       notify("Warning: Maximum of 3 papers per day allowed.", "error");
     }
@@ -72,7 +79,7 @@ const ExaminationTimeTable: React.FC<Props> = ({ settings, onSettingsChange, act
             {classExamTable.length === 0 ? (
               <tr><td colSpan={6} className="p-20 text-center text-gray-300 italic font-bold">No exam slots defined for this class yet.</td></tr>
             ) : classExamTable.map((slot, idx) => (
-              <tr key={idx} className="border-b hover:bg-yellow-50/30 transition">
+              <tr key={slot.id} className="border-b hover:bg-yellow-50/30 transition">
                 <td className="p-4"><input type="date" value={slot.date} onChange={e => handleUpdateSlot(idx, 'date', e.target.value)} className="bg-transparent border-b border-gray-200" /></td>
                 <td className="p-4"><input type="time" value={slot.time} onChange={e => handleUpdateSlot(idx, 'time', e.target.value)} className="bg-transparent border-b border-gray-200" /></td>
                 <td className="p-4">
