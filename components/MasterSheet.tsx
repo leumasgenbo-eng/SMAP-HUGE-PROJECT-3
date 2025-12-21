@@ -136,7 +136,12 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
                   </div>
                   <table className="w-full text-[9px] border border-gray-200 rounded-xl overflow-hidden">
                     <thead className="bg-[#0f3460] text-white font-black uppercase">
-                      <tr><th className="p-2 text-left">Label</th><th className="p-2 text-center">Min %</th><th className="p-2 text-center">Max %</th><th className="p-2 text-left">Remark</th></tr>
+                      <tr>
+                        <th className="p-2 text-left">Label</th>
+                        <th className="p-2 text-center">Min %</th>
+                        <th className="p-2 text-center">Max %</th>
+                        <th className="p-2 text-left">Remark</th>
+                      </tr>
                     </thead>
                     <tbody>
                       {settings.earlyChildhoodGrading.core.ranges.map((r, i) => (
@@ -161,7 +166,12 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
                   </div>
                   <table className="w-full text-[9px] border border-gray-200 rounded-xl overflow-hidden">
                     <thead className="bg-[#cca43b] text-white font-black uppercase">
-                      <tr><th className="p-2 text-left">Label</th><th className="p-2 text-center">Min %</th><th className="p-2 text-center">Max %</th><th className="p-2 text-left">Remark</th></tr>
+                      <tr>
+                        <th className="p-2 text-left">Label</th>
+                        <th className="p-2 text-center">Min %</th>
+                        <th className="p-2 text-center">Max %</th>
+                        <th className="p-2 text-left">Remark</th>
+                      </tr>
                     </thead>
                     <tbody>
                       {settings.earlyChildhoodGrading.indicators.ranges.map((r, i) => (
