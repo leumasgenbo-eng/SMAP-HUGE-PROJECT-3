@@ -11,6 +11,7 @@ import MasterSheet from './components/MasterSheet';
 import ReportCard from './components/ReportCard';
 import DaycareReportCard from './components/DaycareReportCard';
 import DaycareMasterSheet from './components/DaycareMasterSheet';
+import SchoolFeesCard from './components/SchoolFeesCard'; // Added Import
 import FacilitatorDashboard from './components/FacilitatorDashboard';
 import GenericModule from './components/GenericModule';
 import AcademicCalendar from './components/AcademicCalendar';
@@ -98,12 +99,9 @@ const App: React.FC = () => {
   });
 
   // AUTO-SAVE TO BROWSER (TEMPORARY STORAGE)
-  // This effect runs every time students or settings change, keeping data in the browser.
   useEffect(() => {
     localStorage.setItem('uba_students', JSON.stringify(students));
     localStorage.setItem('uba_settings', JSON.stringify(settings));
-    // Optional: Log to console for dev awareness
-    // console.log("Local browser storage updated.");
   }, [students, settings]);
 
   // Cloud Hydration on Mount
@@ -115,7 +113,6 @@ const App: React.FC = () => {
         google.script.run.withSuccessHandler((cloudData: string) => {
           if (cloudData) {
             const parsed = JSON.parse(cloudData);
-            // Only overwrite if cloud data exists
             if (parsed.students && parsed.students.length > 0) setStudents(parsed.students);
             if (parsed.settings) setSettings(parsed.settings);
             notify("Cloud data synchronized successfully.", "success");
@@ -133,12 +130,9 @@ const App: React.FC = () => {
 
   const handleSave = () => {
     setIsSyncing(true);
-    // Explicitly update local storage one last time before cloud sync
     localStorage.setItem('uba_settings', JSON.stringify(settings));
     localStorage.setItem('uba_students', JSON.stringify(students));
-
     const payload = JSON.stringify({ settings, students });
-    
     try {
       // @ts-ignore
       if (typeof google !== 'undefined' && google.script && google.script.run) {
@@ -174,13 +168,11 @@ const App: React.FC = () => {
   };
 
   const isEarlyChildhood = activeTab === 'D&N' || activeTab === 'KG';
-  
   const subjectList = Array.from(new Set([
     ...getSubjectsForDepartment(activeTab),
     ...(settings.customSubjects || [])
   ])).filter(s => !(settings.disabledSubjects || []).includes(s));
 
-  // --- CRITICAL FILTERING FOR CLASS SCOPE ---
   const classSpecificStudents = students.filter(s => s.status === 'Admitted' && s.currentClass === activeClass);
   const processedPupils = processStudentData(classSpecificStudents, settings, subjectList);
 
@@ -201,33 +193,18 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-6">
-           {/* Visual Indicator of temporary storage */}
            <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 no-print">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               <span className="text-[10px] font-black uppercase text-white/80">Local Sync Active</span>
            </div>
-
            <div className="bg-white/10 p-1 rounded-xl flex items-center gap-2 border border-white/20">
               <button onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.1))} className="w-8 h-8 rounded-lg hover:bg-white/20 font-black">-</button>
               <span className="text-[10px] font-black w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
               <button onClick={() => setZoomLevel(prev => Math.min(2, prev + 0.1))} className="w-8 h-8 rounded-lg hover:bg-white/20 font-black">+</button>
            </div>
-           
-           <button 
-              disabled={isSyncing}
-              onClick={handleSave} 
-              className={`min-w-[140px] px-8 py-2 rounded-xl text-xs font-black uppercase shadow-lg transition-all flex items-center justify-center gap-2 ${
-                isSyncing ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#2e8b57] text-white hover:scale-105'
-              }`}
-           >
-             {isSyncing ? (
-               <>
-                 <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                 Syncing...
-               </>
-             ) : 'Cloud Save'}
+           <button disabled={isSyncing} onClick={handleSave} className={`min-w-[140px] px-8 py-2 rounded-xl text-xs font-black uppercase shadow-lg transition-all flex items-center justify-center gap-2 ${isSyncing ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#2e8b57] text-white hover:scale-105'}`}>
+             {isSyncing ? (<><span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>Syncing...</>) : 'Cloud Save'}
            </button>
-
            <div className="flex bg-white/10 p-1.5 rounded-full gap-2 border border-white/20">
             {Object.values(ROLES).map((r: string) => (
               <button key={r} onClick={() => setRole(r as any)} className={`px-6 py-2 rounded-full text-xs font-black uppercase transition-all ${role === r ? 'bg-[#2e8b57] text-white shadow-lg' : 'text-white/60 hover:text-white'}`}>{r}</button>
@@ -247,45 +224,24 @@ const App: React.FC = () => {
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Department</span>
                 <div className="flex flex-col gap-2 mt-2">
                   {DEPARTMENTS.map(dept => (
-                    <button 
-                      key={dept.id} 
-                      onClick={() => { setActiveTab(dept.id); setActiveClass(CLASS_MAPPING[dept.id][0]); }}
-                      className={`text-left p-4 rounded-2xl text-xs font-black uppercase transition-all ${activeTab === dept.id ? 'bg-[#0f3460] text-white shadow-lg' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
-                    >
-                      {dept.label}
-                    </button>
+                    <button key={dept.id} onClick={() => { setActiveTab(dept.id); setActiveClass(CLASS_MAPPING[dept.id][0]); }} className={`text-left p-4 rounded-2xl text-xs font-black uppercase transition-all ${activeTab === dept.id ? 'bg-[#0f3460] text-white shadow-lg' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}>{dept.label}</button>
                   ))}
                 </div>
              </div>
-
              <div className="flex flex-col gap-1 px-2">
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Class Selection</span>
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   {CLASS_MAPPING[activeTab].map(cls => (
-                    <button 
-                      key={cls} 
-                      onClick={() => setActiveClass(cls)}
-                      className={`text-center p-3 rounded-xl text-[10px] font-black uppercase transition-all ${activeClass === cls ? 'bg-[#cca43b] text-[#0f3460]' : 'bg-gray-50 text-gray-500'}`}
-                    >
-                      {cls}
-                    </button>
+                    <button key={cls} onClick={() => setActiveClass(cls)} className={`text-center p-3 rounded-xl text-[10px] font-black uppercase transition-all ${activeClass === cls ? 'bg-[#cca43b] text-[#0f3460]' : 'bg-gray-50 text-gray-500'}`}>{cls}</button>
                   ))}
                 </div>
              </div>
-
              <div className="h-px bg-gray-100 mx-2"></div>
-
              <div className="flex flex-col gap-1 px-2">
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Module</span>
                 <div className="flex flex-col gap-1 mt-2">
                   {modules.map(mod => (
-                    <button 
-                      key={mod} 
-                      onClick={() => setActiveModule(mod)}
-                      className={`text-left p-3 rounded-xl text-[11px] font-black uppercase transition-all ${activeModule === mod ? 'bg-[#cca43b] text-[#0f3460] shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}
-                    >
-                      {mod}
-                    </button>
+                    <button key={mod} onClick={() => setActiveModule(mod)} className={`text-left p-3 rounded-xl text-[11px] font-black uppercase transition-all ${activeModule === mod ? 'bg-[#cca43b] text-[#0f3460] shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>{mod}</button>
                   ))}
                 </div>
              </div>
@@ -331,21 +287,31 @@ const App: React.FC = () => {
                 <GenericModule module={activeModule} department={activeTab} activeClass={activeClass} students={students} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} notify={notify} />
               )}
               
-              {/* Reports Render Logic - Distinct from Data Entry Duplication */}
+              {/* Reports Render Logic */}
               {(activeModule === 'Examination' || activeModule === 'Assessment') && (
                 <div className="space-y-20 pt-10 border-t-4 border-dashed border-gray-200">
                    {isEarlyChildhood ? (
                       <>
                         <DaycareMasterSheet students={classSpecificStudents} pupils={processedPupils} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} activeClass={activeClass} />
                         <div className="grid grid-cols-1 gap-20">
-                           {processedPupils.map(p => <DaycareReportCard key={p.no} pupil={p} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} activeClass={activeClass} />)}
+                           {processedPupils.map(p => (
+                             <React.Fragment key={p.no}>
+                               <DaycareReportCard pupil={p} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} activeClass={activeClass} />
+                               <SchoolFeesCard pupil={p} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} activeClass={activeClass} />
+                             </React.Fragment>
+                           ))}
                         </div>
                       </>
                     ) : (
                       <>
                         <MasterSheet pupils={processedPupils} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} department={activeTab} activeClass={activeClass} />
                         <div className="grid grid-cols-1 gap-20">
-                           {processedPupils.map(p => <ReportCard key={p.no} pupil={p} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} department={activeTab} />)}
+                           {processedPupils.map(p => (
+                             <React.Fragment key={p.no}>
+                               <ReportCard pupil={p} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} department={activeTab} />
+                               <SchoolFeesCard pupil={p} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} activeClass={activeClass} />
+                             </React.Fragment>
+                           ))}
                         </div>
                       </>
                     )}

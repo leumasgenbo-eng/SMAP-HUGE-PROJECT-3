@@ -201,6 +201,44 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
           )}
         </div>
 
+        {/* Conduct, Interest, Punctuality Grid */}
+        {!isWithheld && (
+          <div className="grid grid-cols-4 gap-2 mb-4">
+             <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                <span className="text-[8px] font-black uppercase text-gray-400 block mb-1">Conduct</span>
+                <EditableField 
+                  value={pupil.conduct || "Satisfactory"} 
+                  onSave={(val) => onStudentUpdate(pupil.no.toString(), 'conduct', val)}
+                  className="text-[9px] font-bold text-[#0f3460] uppercase"
+                />
+             </div>
+             <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                <span className="text-[8px] font-black uppercase text-gray-400 block mb-1">Interest</span>
+                <EditableField 
+                  value={pupil.interest || "General Learning"} 
+                  onSave={(val) => onStudentUpdate(pupil.no.toString(), 'interest', val)}
+                  className="text-[9px] font-bold text-[#0f3460] uppercase"
+                />
+             </div>
+             <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                <span className="text-[8px] font-black uppercase text-gray-400 block mb-1">Attitude</span>
+                <EditableField 
+                  value={pupil.attitude || "Positive"} 
+                  onSave={(val) => onStudentUpdate(pupil.no.toString(), 'attitude', val)}
+                  className="text-[9px] font-bold text-[#0f3460] uppercase"
+                />
+             </div>
+             <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                <span className="text-[8px] font-black uppercase text-gray-400 block mb-1">Punctuality</span>
+                <EditableField 
+                  value={pupil.punctuality || "Regular"} 
+                  onSave={(val) => onStudentUpdate(pupil.no.toString(), 'punctuality', val)}
+                  className="text-[9px] font-bold text-[#0f3460] uppercase"
+                />
+             </div>
+          </div>
+        )}
+
         {/* Promotion and Remarks */}
         <div className="space-y-4">
           {settings.currentTerm === 3 && (
