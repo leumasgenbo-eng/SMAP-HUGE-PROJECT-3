@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Student, GlobalSettings } from '../types';
+import EditableField from './EditableField';
 
 interface Props {
   students: Student[];
@@ -10,16 +11,17 @@ interface Props {
   onSettingsChange: (s: GlobalSettings) => void;
   subjectList: string[];
   department: string;
+  activeClass: string;
 }
 
-const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onSettingsChange, subjectList, department }) => {
+const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onSettingsChange, subjectList, department, activeClass }) => {
   const [selectedSubject, setSelectedSubject] = useState(subjectList[0] || '');
-  const [activeTab, setActiveTab] = useState<'term' | 'daily'>('term');
+  const [activeTab, setActiveTab] = useState<'term' | 'daily' | 'mock'>('term');
   const [showDailyPopout, setShowDailyPopout] = useState(false);
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
 
   const isEarlyChildhood = department === 'Daycare' || department === 'Nursery' || department === 'KG' || department === 'D&N';
-  const isJHS = department === 'JHS';
+  const isBasic9 = activeClass === 'Basic 9';
   
   const handleScoreChange = (id: string, section: 'sectionA' | 'sectionB' | 'sectionC', val: number) => {
     const updated = students.map(s => {
@@ -41,6 +43,9 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
         
         if (isEarlyChildhood) {
           details.total = Math.round(((details.sectionA || 0) + (details.sectionB || 0)) / 2);
+        } else if (activeTab === 'mock') {
+          // Mock logic: Total = Section A + Section B
+          details.total = Math.min((details.sectionA || 0) + (details.sectionB || 0), 100);
         } else {
           details.total = Math.min((details.sectionA || 0) + (details.sectionB || 0) + (details.sectionC || 0), 100);
         }
@@ -82,9 +87,16 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
         <div className="flex-1">
           <h2 className="text-3xl font-black text-[#0f3460] uppercase tracking-tighter leading-none">Result Management Hub</h2>
           <div className="flex flex-wrap items-center gap-3 mt-4">
-             <span className="bg-[#cca43b] text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm">
-               {isEarlyChildhood ? 'Early Childhood Dept' : `Active Session: ${settings.academicYear}`}
-             </span>
+             <div className="flex items-center bg-[#cca43b] text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm">
+               {isEarlyChildhood ? 'Early Childhood Dept' : 'Active Session: '}
+               {!isEarlyChildhood && (
+                 <EditableField 
+                   value={settings.academicYear} 
+                   onSave={(v) => onSettingsChange({...settings, academicYear: v})} 
+                   className="ml-2 bg-transparent text-white border-none p-0 inline-block w-auto"
+                 />
+               )}
+             </div>
              {isEarlyChildhood && (
                <div className="flex gap-2">
                  <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Core: {settings.earlyChildhoodGrading.core.type}-Point</span>
@@ -105,18 +117,26 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
           <div className="flex bg-gray-100 p-1 rounded-2xl">
             <button onClick={() => setActiveTab('term')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeTab === 'term' ? 'bg-white text-[#0f3460] shadow-sm' : 'text-gray-400'}`}>Cumulative</button>
             <button onClick={() => setActiveTab('daily')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeTab === 'daily' ? 'bg-white text-[#0f3460] shadow-sm' : 'text-gray-400'}`}>Daily Assessment</button>
+            {isBasic9 && (
+              <button onClick={() => setActiveTab('mock')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeTab === 'mock' ? 'bg-white text-[#0f3460] shadow-sm' : 'text-gray-400'}`}>Mock Scores</button>
+            )}
           </div>
           <button onClick={onSave} className="bg-[#0f3460] text-white px-8 py-4 rounded-2xl font-black uppercase text-xs shadow-xl hover:scale-105 transition">Finalize ledger</button>
         </div>
       </div>
 
       <div className="bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden">
-        {activeTab === 'term' ? (
+        {activeTab === 'term' || activeTab === 'mock' ? (
           <table className="w-full text-sm">
             <thead className="bg-[#f4f6f7] text-[#0f3460]">
               <tr className="text-[10px] font-black uppercase tracking-widest border-b border-gray-100">
                 <th className="p-6 text-left">Pupil Name</th>
-                {!isEarlyChildhood ? (
+                {activeTab === 'mock' ? (
+                  <>
+                    <th className="p-6 text-center">Section A</th>
+                    <th className="p-6 text-center">Section B</th>
+                  </>
+                ) : !isEarlyChildhood ? (
                   <>
                     <th className="p-6 text-center">CAT 1,4,7 (Ind)</th>
                     <th className="p-6 text-center">CAT 2,5,8 (Grp)</th>
@@ -138,17 +158,30 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                 return (
                   <tr key={s.id} className="border-b hover:bg-blue-50/10 transition">
                     <td className="p-6 font-black text-[#0f3460] uppercase">{s.firstName} {s.surname}</td>
-                    <td className="p-6 text-center">
-                      <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionA} onChange={e => handleScoreChange(s.id, 'sectionA', parseInt(e.target.value) || 0)} />
-                    </td>
-                    {!isEarlyChildhood && (
-                      <td className="p-6 text-center">
-                        <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionC} onChange={e => handleScoreChange(s.id, 'sectionC', parseInt(e.target.value) || 0)} />
-                      </td>
+                    {activeTab === 'mock' ? (
+                      <>
+                        <td className="p-6 text-center">
+                          <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionA} onChange={e => handleScoreChange(s.id, 'sectionA', parseInt(e.target.value) || 0)} />
+                        </td>
+                        <td className="p-6 text-center">
+                          <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionB} onChange={e => handleScoreChange(s.id, 'sectionB', parseInt(e.target.value) || 0)} />
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="p-6 text-center">
+                          <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionA} onChange={e => handleScoreChange(s.id, 'sectionA', parseInt(e.target.value) || 0)} />
+                        </td>
+                        {!isEarlyChildhood && (
+                          <td className="p-6 text-center">
+                            <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionC} onChange={e => handleScoreChange(s.id, 'sectionC', parseInt(e.target.value) || 0)} />
+                          </td>
+                        )}
+                        <td className="p-6 text-center">
+                          <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionB} onChange={e => handleScoreChange(s.id, 'sectionB', parseInt(e.target.value) || 0)} />
+                        </td>
+                      </>
                     )}
-                    <td className="p-6 text-center">
-                      <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionB} onChange={e => handleScoreChange(s.id, 'sectionB', parseInt(e.target.value) || 0)} />
-                    </td>
                     <td className="p-6 text-center font-black text-2xl text-[#2e8b57] bg-blue-50/20">{details.total}</td>
                     <td className="p-6"><input className="w-full bg-transparent border-b border-gray-100 text-[10px] italic" value={details.facilitatorRemark} onChange={e => handleScoreChange(s.id, 'facilitatorRemark' as any, e.target.value as any)} placeholder="Observations..." /></td>
                   </tr>

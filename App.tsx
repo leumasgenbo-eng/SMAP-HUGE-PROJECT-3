@@ -30,6 +30,8 @@ const App: React.FC = () => {
   const [activeClass, setActiveClass] = useState('Creche');
   const [status, setStatus] = useState({ message: 'System Ready', type: 'info' });
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const [students, setStudents] = useState<Student[]>(() => {
     const saved = localStorage.getItem('uba_students');
@@ -84,10 +86,62 @@ const App: React.FC = () => {
     return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
   });
 
+  // Cloud Hydration on Mount
+  useEffect(() => {
+    try {
+      // @ts-ignore
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        // @ts-ignore
+        google.script.run.withSuccessHandler((cloudData: string) => {
+          if (cloudData) {
+            const parsed = JSON.parse(cloudData);
+            if (parsed.students) setStudents(parsed.students);
+            if (parsed.settings) setSettings(parsed.settings);
+            notify("Cloud data synchronized successfully.", "success");
+          }
+          setIsInitialLoad(false);
+        }).loadCloudData();
+      } else {
+        setIsInitialLoad(false);
+      }
+    } catch (e) {
+      console.error("Cloud Load Error:", e);
+      setIsInitialLoad(false);
+    }
+  }, []);
+
   const handleSave = () => {
+    setIsSyncing(true);
+    // 1. Save locally for immediate persistence
     localStorage.setItem('uba_settings', JSON.stringify(settings));
     localStorage.setItem('uba_students', JSON.stringify(students));
-    notify("Cloud sync successful!", "success");
+
+    // 2. Sync to Cloud
+    const payload = JSON.stringify({ settings, students });
+    
+    try {
+      // @ts-ignore
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        // @ts-ignore
+        google.script.run.withSuccessHandler((res: any) => {
+          setIsSyncing(false);
+          if (res.status === 'success') {
+            notify("Cloud & Local sync complete!", "success");
+          } else {
+            notify("Cloud Sync Failed: " + res.message, "error");
+          }
+        }).withFailureHandler((err: any) => {
+          setIsSyncing(false);
+          notify("Critical Connection Error: " + err, "error");
+        }).syncCloudData(payload);
+      } else {
+        setIsSyncing(false);
+        notify("Saved Locally. (Cloud unavailable in Dev)", "info");
+      }
+    } catch (e) {
+      setIsSyncing(false);
+      notify("Sync exception occurred.", "error");
+    }
   };
 
   const notify = (msg: string, type: 'info' | 'success' | 'error' = 'info') => {
@@ -101,7 +155,6 @@ const App: React.FC = () => {
 
   const isEarlyChildhood = activeTab === 'D&N' || activeTab === 'KG';
   
-  // Refined Subject List Logic
   const subjectList = Array.from(new Set([
     ...getSubjectsForDepartment(activeTab),
     ...(settings.customSubjects || [])
@@ -118,7 +171,7 @@ const App: React.FC = () => {
     <div className="flex flex-col h-screen bg-[#f4f6f7] overflow-hidden font-sans">
       <header className="no-print bg-[#0f3460] text-white p-4 shadow-2xl flex justify-between items-center z-50 border-b-4 border-[#cca43b]">
         <div className="flex items-center gap-6">
-          <div className="bg-[#cca43b] p-3 rounded-2xl font-black text-[#0f3460] shadow-lg">UBA</div>
+          <div className={`bg-[#cca43b] p-3 rounded-2xl font-black text-[#0f3460] shadow-lg transition-all ${isInitialLoad ? 'animate-pulse scale-110' : ''}`}>UBA</div>
           <div>
             <h1 className="font-black text-2xl tracking-tighter leading-none">{settings.schoolName} S-MAP</h1>
             <p className="text-[10px] uppercase font-bold text-[#cca43b] tracking-widest mt-1">INTEGRATED SCHOOL MANAGEMENT & ASSESSMENT PLATFORM</p>
@@ -131,7 +184,22 @@ const App: React.FC = () => {
               <span className="text-[10px] font-black w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
               <button onClick={() => setZoomLevel(prev => Math.min(2, prev + 0.1))} className="w-8 h-8 rounded-lg hover:bg-white/20 font-black">+</button>
            </div>
-           <button onClick={handleSave} className="bg-[#2e8b57] text-white px-8 py-2 rounded-xl text-xs font-black uppercase shadow-lg hover:scale-105 transition-all">Cloud Save</button>
+           
+           <button 
+              disabled={isSyncing}
+              onClick={handleSave} 
+              className={`min-w-[140px] px-8 py-2 rounded-xl text-xs font-black uppercase shadow-lg transition-all flex items-center justify-center gap-2 ${
+                isSyncing ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#2e8b57] text-white hover:scale-105'
+              }`}
+           >
+             {isSyncing ? (
+               <>
+                 <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                 Syncing...
+               </>
+             ) : 'Cloud Save'}
+           </button>
+
            <div className="flex bg-white/10 p-1.5 rounded-full gap-2 border border-white/20">
             {Object.values(ROLES).map((r: string) => (
               <button key={r} onClick={() => setRole(r as any)} className={`px-6 py-2 rounded-full text-xs font-black uppercase transition-all ${role === r ? 'bg-[#2e8b57] text-white shadow-lg' : 'text-white/60 hover:text-white'}`}>{r}</button>
@@ -140,7 +208,12 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Status Toast */}
+        <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] px-8 py-3 rounded-2xl shadow-2xl font-black uppercase text-[10px] tracking-widest transition-all duration-500 transform ${status.message === 'System Ready' ? 'opacity-0 translate-y-10' : 'opacity-100 translate-y-0'} ${status.type === 'success' ? 'bg-[#2e8b57] text-white' : status.type === 'error' ? 'bg-red-500 text-white' : 'bg-[#0f3460] text-white'}`}>
+           {status.message}
+        </div>
+
         <aside className="no-print w-80 bg-white border-r border-gray-200 shadow-xl p-6 hidden md:flex flex-col gap-6 overflow-y-auto">
           <div className="space-y-6">
              <div className="flex flex-col gap-1 px-2">
@@ -217,7 +290,7 @@ const App: React.FC = () => {
                 )
               ) : activeModule === 'Assessment' ? (
                 isEarlyChildhood ? (
-                   <AssessmentDesk settings={settings} onSettingsChange={setSettings} students={students} activeClass={activeClass} notify={notify} />
+                   <AssessmentDesk settings={settings} onSettingsChange={setSettings} students={students} onStudentsUpdate={setStudents} activeClass={activeClass} notify={notify} />
                 ) : (
                    <GenericModule module="Class Assessment Test System" department={activeTab} activeClass={activeClass} students={students} settings={settings} onSettingsChange={setSettings} notify={notify} />
                 )
@@ -227,10 +300,9 @@ const App: React.FC = () => {
               
               {(activeModule === 'Examination' || activeModule === 'Assessment') && (
                 <div className="space-y-20">
-                   <ScoreEntry students={students.filter(s => s.status === 'Admitted')} onUpdate={setStudents} onSave={handleSave} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} department={activeTab} />
+                   <ScoreEntry students={students.filter(s => s.status === 'Admitted')} onUpdate={setStudents} onSave={handleSave} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} department={activeTab} activeClass={activeClass} />
                    {isEarlyChildhood ? (
                       <>
-                        {/* Fixed line 234: Added onSettingsChange prop to DaycareMasterSheet */}
                         <DaycareMasterSheet pupils={processedPupils} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} />
                         <div className="grid grid-cols-1 gap-20">
                            {processedPupils.map(p => <DaycareReportCard key={p.no} pupil={p} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} />)}

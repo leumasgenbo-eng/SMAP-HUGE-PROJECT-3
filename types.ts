@@ -164,6 +164,7 @@ export interface SBAConfig {
   cat2Marks: number;
   cat3Marks: number;
   questionType: string;
+  bloomTaxonomy: string[];
 }
 
 export interface GlobalSettings {

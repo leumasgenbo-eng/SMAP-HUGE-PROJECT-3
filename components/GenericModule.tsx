@@ -96,7 +96,6 @@ const GenericModule: React.FC<Props> = ({ module, department, activeClass, stude
     }
 
     // Teacher Conflict (Red) - Mocked logic for demo
-    // Fixed line 99: Changed 'day' to 'activeDay'
     if (subj === 'Mathematics' && activeClass.includes('Basic 8') && activeDay === 'Monday' && idx === 2) {
        return { color: 'bg-red-100 text-red-800 border-red-200', label: '🔴 TEACHER CLASH' };
     }
@@ -256,13 +255,21 @@ const GenericModule: React.FC<Props> = ({ module, department, activeClass, stude
   // --- Assessment Desk Section ---
   if (module === 'Class Assessment Test System') {
     const sbaConfig = settings.sbaConfigs?.[activeClass]?.[selectedSbaSubject] || {
-      cat1Date: '', cat2Date: '', cat3Date: '', cat1Marks: 30, cat2Marks: 40, cat3Marks: 30, questionType: 'Objective'
+      cat1Date: '', cat2Date: '', cat3Date: '', cat1Marks: 30, cat2Marks: 40, cat3Marks: 30, questionType: 'Objective', bloomTaxonomy: []
     };
 
     const handleSbaUpdate = (field: keyof SBAConfig, val: any) => {
       const classConfigs = settings.sbaConfigs?.[activeClass] || {};
       const updated = { ...settings.sbaConfigs, [activeClass]: { ...classConfigs, [selectedSbaSubject]: { ...sbaConfig, [field]: val } } };
       onSettingsChange({ ...settings, sbaConfigs: updated });
+    };
+
+    const toggleBloom = (item: string) => {
+      const current = sbaConfig.bloomTaxonomy || [];
+      const updated = current.includes(item)
+        ? current.filter(i => i !== item)
+        : [...current, item];
+      handleSbaUpdate('bloomTaxonomy', updated);
     };
 
     return (
@@ -306,7 +313,15 @@ const GenericModule: React.FC<Props> = ({ module, department, activeClass, stude
            <div className="space-y-4">
               <h4 className="text-xs font-black text-blue-900 uppercase">Bloom's Taxonomy Balance</h4>
               <div className="flex flex-wrap gap-2">
-                 {BLOOM_TAXONOMY.map(b => <span key={b} className="bg-white px-3 py-1 rounded-full text-[9px] font-black text-blue-800 border border-blue-100">{b}</span>)}
+                 {BLOOM_TAXONOMY.map(b => (
+                   <button 
+                     key={b} 
+                     onClick={() => toggleBloom(b)}
+                     className={`px-3 py-1 rounded-full text-[9px] font-black border transition-all ${sbaConfig.bloomTaxonomy?.includes(b) ? 'bg-[#0f3460] text-white border-[#0f3460] shadow-md' : 'bg-white text-blue-800 border-blue-100'}`}
+                   >
+                     {b}
+                   </button>
+                 ))}
               </div>
            </div>
            <div className="space-y-4">
@@ -316,6 +331,7 @@ const GenericModule: React.FC<Props> = ({ module, department, activeClass, stude
                 <option>Short Answers & Data Analysis</option>
                 <option>Long Essay & Critical Thinking</option>
                 <option>Practical Project & Lab Work</option>
+                <option>Combination</option>
               </select>
            </div>
         </div>

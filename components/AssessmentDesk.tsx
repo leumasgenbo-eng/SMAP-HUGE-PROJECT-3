@@ -7,14 +7,14 @@ interface Props {
   settings: GlobalSettings;
   onSettingsChange: (s: GlobalSettings) => void;
   students: Student[];
+  onStudentsUpdate: (s: Student[]) => void;
   activeClass: string;
   notify: any;
 }
 
-const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students, activeClass, notify }) => {
-  const [date, setDate] = useState('');
+const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students, onStudentsUpdate, activeClass, notify }) => {
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [period, setPeriod] = useState('L1');
-  const [duration, setDuration] = useState('45 mins');
   const [venue, setVenue] = useState(DAYCARE_VENUES[0]);
   const [scaleType, setScaleType] = useState<2 | 3 | 5 | 9>(3);
   const [activeIndicator, setActiveIndicator] = useState(settings.activeIndicators[0] || '');
@@ -25,11 +25,66 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
     return val.toString();
   };
 
+  const handleScoreUpdate = (studentId: string, score: number) => {
+    if (!activeIndicator || !date) {
+      notify("Select indicator and date first", "error");
+      return;
+    }
+
+    const updated = students.map(s => {
+      if (s.id === studentId) {
+        const currentDetails = s.scoreDetails?.[activeIndicator] || { 
+          total: 0, 
+          grade: '', 
+          facilitatorRemark: '', 
+          dailyScores: {} 
+        };
+        
+        const newDailyScores = { ...(currentDetails.dailyScores || {}), [date]: score };
+        const scores = Object.values(newDailyScores);
+        const avg = Math.round(scores.reduce((a, b) => a + b, 0) / (scores.length || 1));
+        
+        return {
+          ...s,
+          scoreDetails: {
+            ...(s.scoreDetails || {}),
+            [activeIndicator]: {
+              ...currentDetails,
+              dailyScores: newDailyScores,
+              sectionA: avg, // We use Section A as the daily average for early childhood
+              total: avg
+            }
+          }
+        };
+      }
+      return s;
+    });
+    onStudentsUpdate(updated);
+  };
+
+  const handleNoteUpdate = (studentId: string, note: string) => {
+    const updated = students.map(s => {
+      if (s.id === studentId) {
+        const currentDetails = s.scoreDetails?.[activeIndicator] || { total: 0, grade: '', facilitatorRemark: '', dailyScores: {} };
+        return {
+          ...s,
+          scoreDetails: {
+            ...(s.scoreDetails || {}),
+            [activeIndicator]: { ...currentDetails, facilitatorRemark: note }
+          }
+        };
+      }
+      return s;
+    });
+    onStudentsUpdate(updated);
+  };
+
   const handleSharePDF = () => {
     alert(`Sharing Assessment Report for ${activeClass}...`);
   };
 
-  const isLapsed = date && new Date(date) < new Date();
+  // Fix: Convert Date object to numeric timestamp using .getTime() to correctly compare with number returned by setHours()
+  const isLapsed = date && new Date(date).getTime() < new Date().setHours(0,0,0,0);
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -67,14 +122,14 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
         </div>
         {isLapsed && (
           <div className="absolute top-0 right-0 bg-red-600 text-white px-10 py-2 rotate-45 translate-x-12 translate-y-4 font-black text-[10px] shadow-lg">
-             TASK NOT COMPLETED
+             HISTORICAL ENTRY
           </div>
         )}
       </div>
 
       <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
         <div className="mb-8 border-b pb-6 flex justify-between items-center">
-           <div>
+           <div className="flex-1">
               <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block">Active Indicator Selection</label>
               <select className="bg-gray-50 p-4 rounded-2xl border-none font-black text-[#0f3460] focus:ring-2 focus:ring-[#cca43b] text-sm shadow-inner min-w-[300px]" value={activeIndicator} onChange={e => setActiveIndicator(e.target.value)}>
                  {settings.activeIndicators.map(i => <option key={i} value={i}>{i}</option>)}
@@ -82,7 +137,7 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
            </div>
            <div className="flex gap-3">
               <button onClick={handleSharePDF} className="bg-[#2e8b57] text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-xl">Share PDF Report</button>
-              <button onClick={() => notify("Assessment Data Stored.", "success")} className="bg-[#0f3460] text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-xl">Save All</button>
+              <button onClick={() => notify("Assessment data synchronized with cloud ledger.", "success")} className="bg-[#0f3460] text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-xl">Commit Changes</button>
            </div>
         </div>
 
@@ -98,23 +153,49 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                 </tr>
               </thead>
               <tbody>
-                {students.filter(s => s.currentClass === activeClass).map(s => (
-                  <tr key={s.id} className="border-b hover:bg-gray-50 transition">
-                    <td className="p-5 font-black uppercase text-[#0f3460]">{s.firstName} {s.surname}</td>
-                    <td className="p-5 text-gray-400 font-bold">Group Alpha</td>
-                    <td className="p-5">
-                       <div className="flex gap-1">
-                          {Array.from({ length: scaleType }).map((_, i) => (
-                             <button key={i} className="w-8 h-8 rounded-lg bg-gray-100 font-black text-[10px] hover:bg-[#cca43b] hover:text-white transition" title={getScaleLabel(i+1)}>
-                                {i + 1}
-                             </button>
-                          ))}
-                       </div>
-                    </td>
-                    <td className="p-5 text-center font-black text-lg text-blue-600">--</td>
-                    <td className="p-5"><input className="w-full bg-transparent border-b italic text-xs" placeholder="Add specific observation..." /></td>
-                  </tr>
-                ))}
+                {students.filter(s => s.currentClass === activeClass).map(s => {
+                  const details = s.scoreDetails?.[activeIndicator];
+                  const currentScore = details?.dailyScores?.[date];
+                  const avg = details?.sectionA || 0;
+                  
+                  return (
+                    <tr key={s.id} className="border-b hover:bg-gray-50 transition">
+                      <td className="p-5 font-black uppercase text-[#0f3460]">{s.firstName} {s.surname}</td>
+                      <td className="p-5 text-gray-400 font-bold uppercase text-[9px]">Class Enrolled</td>
+                      <td className="p-5">
+                         <div className="flex gap-1">
+                            {Array.from({ length: scaleType }).map((_, i) => {
+                              const val = i + 1;
+                              const isActive = currentScore === val;
+                              return (
+                                <button 
+                                  key={i} 
+                                  onClick={() => handleScoreUpdate(s.id, val)}
+                                  className={`w-8 h-8 rounded-lg font-black text-[10px] transition-all border-2 ${isActive ? 'bg-[#0f3460] text-white border-[#0f3460] shadow-md scale-110' : 'bg-gray-100 text-gray-400 border-transparent hover:bg-gray-200'}`} 
+                                  title={getScaleLabel(val)}
+                                >
+                                  {val}
+                                </button>
+                              );
+                            })}
+                         </div>
+                      </td>
+                      <td className="p-5 text-center">
+                        <span className={`text-xl font-black px-4 py-1 rounded-xl ${avg >= (scaleType/2) ? 'text-[#2e8b57] bg-green-50' : 'text-orange-500 bg-orange-50'}`}>
+                          {avg > 0 ? avg : '--'}
+                        </span>
+                      </td>
+                      <td className="p-5">
+                        <input 
+                          className="w-full bg-gray-50 p-3 rounded-xl border-none italic text-xs font-medium focus:ring-1 focus:ring-[#cca43b]" 
+                          placeholder="Observation detail..." 
+                          value={details?.facilitatorRemark || ''}
+                          onChange={(e) => handleNoteUpdate(s.id, e.target.value)}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
            </table>
         </div>
