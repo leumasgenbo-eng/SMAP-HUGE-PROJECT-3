@@ -189,7 +189,7 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
             <div className="max-w-4xl mx-auto space-y-10">
                <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-xl">
                   <h3 className="text-2xl font-black text-[#0f3460] mb-4 uppercase">Automated Promotion Engine</h3>
-                  <p className="text-sm text-gray-500 mb-8 italic">Criteria: (Pass All Subjects) & (Attend >= 95%) & (Fees Cleared)</p>
+                  <p className="text-sm text-gray-500 mb-8 italic">Criteria: (Pass All Subjects) &amp; (Attend &ge; 95%) &amp; (Fees Cleared)</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
                      <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100">
