@@ -156,15 +156,17 @@ export interface EarlyChildhoodGradingConfig {
   ranges: EarlyChildhoodGradeRange[];
 }
 
-export interface SBAConfig {
-  cat1Date: string;
-  cat2Date: string;
-  cat3Date: string;
-  cat1Marks: number;
-  cat2Marks: number;
-  cat3Marks: number;
+export interface CATConfig {
+  date: string;
+  marks: number;
   questionType: string;
   bloomTaxonomy: string[];
+}
+
+export interface SBAConfig {
+  cat1: CATConfig;
+  cat2: CATConfig;
+  cat3: CATConfig;
 }
 
 export interface GlobalSettings {

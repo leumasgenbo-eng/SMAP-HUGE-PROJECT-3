@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Student, GlobalSettings, SBAConfig } from '../types';
+import { Student, GlobalSettings, SBAConfig, CATConfig } from '../types';
 import EditableField from './EditableField';
 import { getSubjectsForDepartment, BLOOM_TAXONOMY, CORE_SUBJECTS } from '../constants';
 
@@ -255,22 +255,36 @@ const GenericModule: React.FC<Props> = ({ module, department, activeClass, stude
   // --- Assessment Desk Section ---
   if (module === 'Class Assessment Test System') {
     const sbaConfig = settings.sbaConfigs?.[activeClass]?.[selectedSbaSubject] || {
-      cat1Date: '', cat2Date: '', cat3Date: '', cat1Marks: 30, cat2Marks: 40, cat3Marks: 30, questionType: 'Objective', bloomTaxonomy: []
+      cat1: { date: '', marks: 30, questionType: 'Objective & Multiple Choice', bloomTaxonomy: [] },
+      cat2: { date: '', marks: 40, questionType: 'Combination', bloomTaxonomy: [] },
+      cat3: { date: '', marks: 30, questionType: 'Combination', bloomTaxonomy: [] }
     };
 
-    const handleSbaUpdate = (field: keyof SBAConfig, val: any) => {
+    const handleSbaUpdate = (catKey: 'cat1' | 'cat2' | 'cat3', field: keyof CATConfig, val: any) => {
       const classConfigs = settings.sbaConfigs?.[activeClass] || {};
-      const updated = { ...settings.sbaConfigs, [activeClass]: { ...classConfigs, [selectedSbaSubject]: { ...sbaConfig, [field]: val } } };
-      onSettingsChange({ ...settings, sbaConfigs: updated });
+      const currentCat = sbaConfig[catKey];
+      const updatedCat = { ...currentCat, [field]: val };
+      const updatedSba = { ...sbaConfig, [catKey]: updatedCat };
+      
+      const updatedConfigs = { ...settings.sbaConfigs, [activeClass]: { ...classConfigs, [selectedSbaSubject]: updatedSba } };
+      onSettingsChange({ ...settings, sbaConfigs: updatedConfigs });
     };
 
-    const toggleBloom = (item: string) => {
-      const current = sbaConfig.bloomTaxonomy || [];
+    const toggleBloomForCat = (catKey: 'cat1' | 'cat2' | 'cat3', item: string) => {
+      const current = sbaConfig[catKey].bloomTaxonomy || [];
       const updated = current.includes(item)
         ? current.filter(i => i !== item)
         : [...current, item];
-      handleSbaUpdate('bloomTaxonomy', updated);
+      handleSbaUpdate(catKey, 'bloomTaxonomy', updated);
     };
+
+    const paperStandards = [
+      'Objective & Multiple Choice',
+      'Short Answers & Data Analysis',
+      'Long Essay & Critical Thinking',
+      'Practical Project & Lab Work',
+      'Combination'
+    ];
 
     return (
       <div className="bg-white p-12 rounded-[3rem] shadow-2xl animate-fadeIn space-y-10 border border-gray-100">
@@ -298,62 +312,78 @@ const GenericModule: React.FC<Props> = ({ module, department, activeClass, stude
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-           {[
-             { id: 1, label: 'CAT 1 (INDIVIDUAL)', date: sbaConfig.cat1Date, field: 'cat1Date', marks: sbaConfig.cat1Marks, marksField: 'cat1Marks' },
-             { id: 2, label: 'CAT 2 (GROUP WORK)', date: sbaConfig.cat2Date, field: 'cat2Date', marks: sbaConfig.cat2Marks, marksField: 'cat2Marks' },
-             { id: 3, label: 'CAT 3 (INDIVIDUAL)', date: sbaConfig.cat3Date, field: 'cat3Date', marks: sbaConfig.cat3Marks, marksField: 'cat3Marks' }
-           ].map(cat => (
-             <div key={cat.id} className="p-8 bg-gray-50 rounded-[2rem] border border-gray-100 space-y-6">
-                <h4 className="text-xs font-black text-[#0f3460] uppercase tracking-widest">{cat.label}</h4>
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase text-gray-400">Execution Date</label>
-                    <input type="date" className="w-full p-3 rounded-xl bg-white border-none font-bold" value={cat.date} onChange={e => handleSbaUpdate(cat.field as any, e.target.value)} />
+           {(['cat1', 'cat2', 'cat3'] as const).map((catKey, idx) => {
+             const cat = sbaConfig[catKey];
+             const label = catKey === 'cat1' ? 'CAT 1 (INDIVIDUAL)' : catKey === 'cat2' ? 'CAT 2 (GROUP WORK)' : 'CAT 3 (INDIVIDUAL)';
+             
+             return (
+               <div key={catKey} className="p-8 bg-gray-50 rounded-[2rem] border border-gray-100 space-y-6 flex flex-col">
+                  <h4 className="text-xs font-black text-[#0f3460] uppercase tracking-widest border-b pb-2">{label}</h4>
+                  
+                  <div className="space-y-4 flex-1">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase text-gray-400">Execution Date</label>
+                      <input type="date" className="w-full p-3 rounded-xl bg-white border-none font-bold" value={cat.date} onChange={e => handleSbaUpdate(catKey, 'date', e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase text-gray-400">Marks Allocation</label>
+                      <input 
+                        type="number" 
+                        disabled={settings.sbaMarksLocked}
+                        className={`w-full p-3 rounded-xl bg-white border-none font-bold ${settings.sbaMarksLocked ? 'opacity-50 cursor-not-allowed text-gray-400' : ''}`} 
+                        value={cat.marks} 
+                        onChange={e => handleSbaUpdate(catKey, 'marks', parseInt(e.target.value))} 
+                      />
+                    </div>
+
+                    <div className="space-y-2 pt-4 border-t border-gray-200/50">
+                       <label className="text-[9px] font-black uppercase text-gray-400 block">Bloom's Taxonomy Focus</label>
+                       <div className="flex flex-wrap gap-1.5">
+                          {BLOOM_TAXONOMY.map(b => (
+                            <button 
+                              key={b} 
+                              onClick={() => toggleBloomForCat(catKey, b)}
+                              className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase transition-all ${cat.bloomTaxonomy?.includes(b) ? 'bg-[#0f3460] text-white' : 'bg-white text-gray-400 border border-gray-200 hover:border-[#cca43b]'}`}
+                            >
+                              {b.slice(0, 3)}
+                            </button>
+                          ))}
+                       </div>
+                    </div>
+
+                    <div className="space-y-1 pt-2">
+                       <label className="text-[9px] font-black uppercase text-gray-400 block">Assessment Standard</label>
+                       <select 
+                        className="w-full p-3 rounded-xl bg-white border-none font-black text-[10px] uppercase shadow-sm" 
+                        value={cat.questionType} 
+                        onChange={e => handleSbaUpdate(catKey, 'questionType', e.target.value)}
+                       >
+                         {paperStandards.map(s => <option key={s} value={s}>{s}</option>)}
+                       </select>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase text-gray-400">Marks Allocation</label>
-                    <input 
-                      type="number" 
-                      disabled={settings.sbaMarksLocked}
-                      className={`w-full p-3 rounded-xl bg-white border-none font-bold ${settings.sbaMarksLocked ? 'opacity-50 cursor-not-allowed text-gray-400' : ''}`} 
-                      value={cat.marks} 
-                      onChange={e => handleSbaUpdate(cat.marksField as any, parseInt(e.target.value))} 
-                    />
-                  </div>
-                </div>
-             </div>
-           ))}
+               </div>
+             );
+           })}
         </div>
 
-        <div className="bg-blue-50 p-8 rounded-[2rem] grid grid-cols-1 md:grid-cols-2 gap-8">
-           <div className="space-y-4">
-              <h4 className="text-xs font-black text-blue-900 uppercase">Bloom's Taxonomy Balance</h4>
-              <div className="flex flex-wrap gap-2">
-                 {BLOOM_TAXONOMY.map(b => (
-                   <button 
-                     key={b} 
-                     onClick={() => toggleBloom(b)}
-                     className={`px-3 py-1 rounded-full text-[9px] font-black border transition-all ${sbaConfig.bloomTaxonomy?.includes(b) ? 'bg-[#0f3460] text-white border-[#0f3460] shadow-md' : 'bg-white text-blue-800 border-blue-100'}`}
-                   >
-                     {b}
-                   </button>
-                 ))}
-              </div>
-           </div>
-           <div className="space-y-4">
-              <h4 className="text-xs font-black text-blue-900 uppercase">Paper Standards</h4>
-              <select className="w-full p-4 rounded-xl bg-white border-none font-black text-xs" value={sbaConfig.questionType} onChange={e => handleSbaUpdate('questionType', e.target.value)}>
-                <option>Objective & Multiple Choice</option>
-                <option>Short Answers & Data Analysis</option>
-                <option>Long Essay & Critical Thinking</option>
-                <option>Practical Project & Lab Work</option>
-                <option>Combination</option>
-              </select>
+        <div className="bg-blue-50 p-8 rounded-[2rem]">
+           <h4 className="text-xs font-black text-blue-900 uppercase mb-4 flex items-center gap-2">
+             <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span> Distinct Plan Audit
+           </h4>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-[10px]">
+              {['cat1', 'cat2', 'cat3'].map((ck: any) => (
+                <div key={ck} className="bg-white/50 p-4 rounded-xl space-y-2 italic text-blue-800">
+                   <p className="font-black uppercase not-italic">{ck.toUpperCase()}:</p>
+                   <p>• {sbaConfig[ck as keyof SBAConfig].bloomTaxonomy?.length || 0} Objective areas targeted</p>
+                   <p>• Standard: {sbaConfig[ck as keyof SBAConfig].questionType}</p>
+                </div>
+              ))}
            </div>
         </div>
 
         <div className="flex justify-end gap-4">
-           <button onClick={() => notify("SBA Cycle Confirmed", "success")} className="bg-[#2e8b57] text-white px-12 py-4 rounded-2xl font-black uppercase text-xs shadow-xl tracking-widest">Confirm Assessment Plan</button>
+           <button onClick={() => notify("SBA Distinct Cycle Confirmed", "success")} className="bg-[#2e8b57] text-white px-12 py-4 rounded-2xl font-black uppercase text-xs shadow-xl tracking-widest">Confirm All Plans</button>
         </div>
       </div>
     );
