@@ -112,11 +112,9 @@ const App: React.FC = () => {
 
   const handleSave = () => {
     setIsSyncing(true);
-    // 1. Save locally for immediate persistence
     localStorage.setItem('uba_settings', JSON.stringify(settings));
     localStorage.setItem('uba_students', JSON.stringify(students));
 
-    // 2. Sync to Cloud
     const payload = JSON.stringify({ settings, students });
     
     try {
@@ -160,7 +158,10 @@ const App: React.FC = () => {
     ...(settings.customSubjects || [])
   ])).filter(s => !(settings.disabledSubjects || []).includes(s));
 
-  const processedPupils = processStudentData(students.filter(s => s.status === 'Admitted'), settings, subjectList);
+  // --- CRITICAL FILTERING FOR CLASS SCOPE ---
+  // Only process students for the ACTIVE CLASS
+  const classSpecificStudents = students.filter(s => s.status === 'Admitted' && s.currentClass === activeClass);
+  const processedPupils = processStudentData(classSpecificStudents, settings, subjectList);
 
   const modules = [
     'Academic Calendar', 'Pupil Management', 'Staff Management', 'Time Table', 
@@ -209,7 +210,6 @@ const App: React.FC = () => {
       </header>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Status Toast */}
         <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] px-8 py-3 rounded-2xl shadow-2xl font-black uppercase text-[10px] tracking-widest transition-all duration-500 transform ${status.message === 'System Ready' ? 'opacity-0 translate-y-10' : 'opacity-100 translate-y-0'} ${status.type === 'success' ? 'bg-[#2e8b57] text-white' : status.type === 'error' ? 'bg-red-500 text-white' : 'bg-[#0f3460] text-white'}`}>
            {status.message}
         </div>
@@ -300,17 +300,29 @@ const App: React.FC = () => {
               
               {(activeModule === 'Examination' || activeModule === 'Assessment') && (
                 <div className="space-y-20">
-                   <ScoreEntry students={students.filter(s => s.status === 'Admitted')} onUpdate={setStudents} onSave={handleSave} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} department={activeTab} activeClass={activeClass} />
+                   <ScoreEntry 
+                    students={classSpecificStudents} 
+                    onUpdate={(updatedClassList) => {
+                      const otherStudents = students.filter(s => s.currentClass !== activeClass || s.status !== 'Admitted');
+                      setStudents([...otherStudents, ...updatedClassList]);
+                    }} 
+                    onSave={handleSave} 
+                    settings={settings} 
+                    onSettingsChange={setSettings} 
+                    subjectList={subjectList} 
+                    department={activeTab} 
+                    activeClass={activeClass} 
+                   />
                    {isEarlyChildhood ? (
                       <>
-                        <DaycareMasterSheet pupils={processedPupils} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} />
+                        <DaycareMasterSheet pupils={processedPupils} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} activeClass={activeClass} />
                         <div className="grid grid-cols-1 gap-20">
-                           {processedPupils.map(p => <DaycareReportCard key={p.no} pupil={p} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} />)}
+                           {processedPupils.map(p => <DaycareReportCard key={p.no} pupil={p} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} activeClass={activeClass} />)}
                         </div>
                       </>
                     ) : (
                       <>
-                        <MasterSheet pupils={processedPupils} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} department={activeTab} />
+                        <MasterSheet pupils={processedPupils} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} department={activeTab} activeClass={activeClass} />
                         <div className="grid grid-cols-1 gap-20">
                            {processedPupils.map(p => <ReportCard key={p.no} pupil={p} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} department={activeTab} />)}
                         </div>

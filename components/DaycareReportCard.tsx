@@ -9,9 +9,11 @@ interface Props {
   settings: GlobalSettings;
   onSettingsChange: (s: GlobalSettings) => void;
   onStudentUpdate: (id: string, field: string, value: any) => void;
+  // Added activeClass to props
+  activeClass: string;
 }
 
-const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStudentUpdate }) => {
+const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStudentUpdate, activeClass }) => {
   const coreConfig = settings.earlyChildhoodGrading.core;
   const indConfig = settings.earlyChildhoodGrading.indicators;
   
@@ -38,6 +40,7 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
       <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-6 text-[11px] font-bold border-b pb-4">
         <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase">Name:</span><span className="flex-1 border-b border-black uppercase text-sm font-black">{pupil.name}</span></div>
         <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase">Term:</span><span className="w-16 border-b border-black text-center">{settings.currentTerm}</span></div>
+        <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase">Class:</span><span className="w-24 border-b border-black text-center">{activeClass}</span></div>
         <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase">Attendance:</span><span className="w-24 border-b border-black text-center">{pupil.attendance} / {settings.totalAttendance}</span></div>
         <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase">Vacation:</span><span className="flex-1 border-b border-black text-center">{settings.examEnd}</span></div>
       </div>

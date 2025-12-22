@@ -9,9 +9,11 @@ interface Props {
   settings: GlobalSettings;
   onSettingsChange: (s: GlobalSettings) => void;
   subjectList: string[];
+  // Added activeClass to props
+  activeClass: string;
 }
 
-const DaycareMasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subjectList }) => {
+const DaycareMasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subjectList, activeClass }) => {
   const indicators = settings.activeIndicators || [];
 
   const getShortName = (name: string) => {
@@ -31,7 +33,8 @@ const DaycareMasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChang
           onSave={v => onSettingsChange({...settings, schoolName: v})} 
           className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-2" 
         />
-        <h2 className="text-2xl font-bold text-[#cca43b] uppercase tracking-widest">EARLY CHILDHOOD MASTER BROAD SHEET</h2>
+        {/* Updated to show activeClass */}
+        <h2 className="text-2xl font-bold text-[#cca43b] uppercase tracking-widest">EARLY CHILDHOOD MASTER BROAD SHEET - {activeClass}</h2>
         
         <div className="flex justify-center gap-4 text-sm font-bold text-gray-500 mt-2 mb-4">
           <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />

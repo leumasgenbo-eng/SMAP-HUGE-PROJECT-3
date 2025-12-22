@@ -44,7 +44,6 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
         if (isEarlyChildhood) {
           details.total = Math.round(((details.sectionA || 0) + (details.sectionB || 0)) / 2);
         } else if (activeTab === 'mock') {
-          // Mock logic: Total = Section A + Section B
           details.total = Math.min((details.sectionA || 0) + (details.sectionB || 0), 100);
         } else {
           details.total = Math.min((details.sectionA || 0) + (details.sectionB || 0) + (details.sectionC || 0), 100);
@@ -85,7 +84,10 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
     <div className="space-y-6 animate-fadeIn">
       <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
         <div className="flex-1">
-          <h2 className="text-3xl font-black text-[#0f3460] uppercase tracking-tighter leading-none">Result Management Hub</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-3xl font-black text-[#0f3460] uppercase tracking-tighter leading-none">Result Management Hub</h2>
+            <span className="bg-[#0f3460] text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase">Class: {activeClass}</span>
+          </div>
           <div className="flex flex-wrap items-center gap-3 mt-4">
              <div className="flex items-center bg-[#cca43b] text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm">
                {isEarlyChildhood ? 'Early Childhood Dept' : 'Active Session: '}
@@ -97,12 +99,6 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                  />
                )}
              </div>
-             {isEarlyChildhood && (
-               <div className="flex gap-2">
-                 <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Core: {settings.earlyChildhoodGrading.core.type}-Point</span>
-                 <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Skills: {settings.earlyChildhoodGrading.indicators.type}-Point</span>
-               </div>
-             )}
           </div>
         </div>
         
@@ -153,7 +149,9 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
               </tr>
             </thead>
             <tbody>
-              {students.map(s => {
+              {students.length === 0 ? (
+                <tr><td colSpan={6} className="p-20 text-center font-black uppercase text-gray-300 italic">No Admitted Students Found in {activeClass}</td></tr>
+              ) : students.map(s => {
                 const details = s.scoreDetails?.[selectedSubject] || { sectionA: 0, sectionB: 0, sectionC: 0, total: 0, facilitatorRemark: '' };
                 return (
                   <tr key={s.id} className="border-b hover:bg-blue-50/10 transition">
@@ -194,7 +192,7 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
             <div className="flex justify-between items-center border-b pb-4">
               <div>
                 <h3 className="text-xl font-black text-[#0f3460] uppercase tracking-tighter">Daily assessment of subject score</h3>
-                <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">Recording individual indicator progress</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">Recording individual indicator progress for {activeClass}</p>
               </div>
               <div className="flex gap-3 items-center">
                 <input type="date" className="p-2 rounded-xl bg-gray-50 border-none font-bold text-xs" value={newDate} onChange={e => setNewDate(e.target.value)} />
@@ -237,7 +235,7 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
             <div className="bg-[#cca43b] p-8 text-white flex justify-between items-center">
                <div>
                  <h3 className="text-2xl font-black uppercase tracking-tighter">Daily Subject Entry Score Ledger</h3>
-                 <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">{selectedSubject} • Active Date: {newDate}</p>
+                 <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">{selectedSubject} • {activeClass} • {newDate}</p>
                </div>
                <button onClick={() => setShowDailyPopout(false)} className="bg-white/20 p-2 rounded-full hover:bg-white/40 transition text-2xl">✕</button>
             </div>

@@ -11,9 +11,10 @@ interface Props {
   onSettingsChange: (s: GlobalSettings) => void;
   subjectList: string[];
   department: string;
+  activeClass: string;
 }
 
-const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subjectList, department }) => {
+const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subjectList, department, activeClass }) => {
   const stats = subjectList.map(subj => {
     const scores = pupils.map(p => p.scores[subj] || 0);
     return { name: subj, ...calculateStats(scores) };
@@ -21,34 +22,8 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
 
   const isEarlyChildhood = department === 'Daycare' || department === 'Nursery' || department === 'KG' || department === 'D&N';
 
-  const handleRemarkChange = (grade: string, remark: string) => {
-    const updated = { ...(settings.gradingSystemRemarks || {}) };
-    updated[grade] = remark;
-    onSettingsChange({ ...settings, gradingSystemRemarks: updated });
-  };
-
-  const updateECScale = (target: 'core' | 'indicators', type: 3 | 5 | 9) => {
-    const config: EarlyChildhoodGradingConfig = { type, ranges: [] };
-    if (type === 3) config.ranges = target === 'core' ? EC_DEFAULT_GRADES.core3 : EC_DEFAULT_GRADES.ind3;
-    else if (type === 5) config.ranges = EC_DEFAULT_GRADES.core5;
-    else {
-      // 9-Point default mapping
-      config.ranges = NRT_SCALE.map(n => ({ label: n.grade, min: 0, max: 0, color: n.color, remark: n.remark }));
-    }
-    const updated = { ...settings.earlyChildhoodGrading, [target]: config };
-    onSettingsChange({ ...settings, earlyChildhoodGrading: updated });
-  };
-
-  const updateECRange = (target: 'core' | 'indicators', idx: number, field: keyof EarlyChildhoodGradeRange, val: any) => {
-    const config = { ...settings.earlyChildhoodGrading[target] };
-    config.ranges[idx] = { ...config.ranges[idx], [field]: val };
-    onSettingsChange({ ...settings, earlyChildhoodGrading: { ...settings.earlyChildhoodGrading, [target]: config } });
-  };
-
   const isJHS = department === 'JHS';
-  const isBasic9 = pupils.length > 0 && pupils.every(p => true); // In a real scenario we'd check student meta, but we can infer from context
   
-  // Logic: Use MOCK EXAMINATION SHEET if mockSeries is present or it's JHS, otherwise EXAMINATION MASTER BROAD SHEET
   const displayExamTitle = (isJHS || settings.mockSeries) 
     ? "MOCK EXAMINATION SHEET" 
     : "EXAMINATION MASTER BROAD SHEET";
@@ -64,8 +39,10 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
           <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
         </div>
 
-        <p className="text-xl font-bold text-gray-600 uppercase mb-4">{displayExamTitle}</p>
-        <div className="flex justify-center gap-10 text-[10px] font-black uppercase tracking-widest text-[#cca43b]">
+        <p className="text-xl font-black text-[#0f3460] uppercase mb-1">{displayExamTitle}</p>
+        <p className="text-lg font-black text-[#cca43b] uppercase mb-4 tracking-widest">CLASS: {activeClass}</p>
+
+        <div className="flex justify-center gap-10 text-[10px] font-black uppercase tracking-widest text-gray-400">
           <span>Academic Year: {settings.academicYear}</span>
           <span>{isJHS ? `Mock Series: ${settings.mockSeries}` : `Term: ${settings.currentTerm}`}</span>
           <span>Generated: {new Date().toLocaleDateString()}</span>
@@ -74,17 +51,6 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
 
       {!isEarlyChildhood ? (
         <>
-          <div className="grid grid-cols-2 gap-8 mb-10 no-print bg-[#f4f6f7] p-8 rounded-[2rem] border border-gray-100">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Exam Start Date</label>
-              <input type="date" className="block w-full bg-white border-none rounded-xl p-4 font-black text-[#0f3460]" value={settings.examStart} onChange={e => onSettingsChange({...settings, examStart: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Exam End Date</label>
-              <input type="date" className="block w-full bg-white border-none rounded-xl p-4 font-black text-[#0f3460]" value={settings.examEnd} onChange={e => onSettingsChange({...settings, examEnd: e.target.value})} />
-            </div>
-          </div>
-
           <table className="w-full text-[10px] border-2 border-black">
             <thead className="bg-[#f4f6f7]">
               <tr className="font-black text-[#0f3460]">
@@ -104,7 +70,9 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
               </tr>
             </thead>
             <tbody>
-              {pupils.map((pupil, rank) => (
+              {pupils.length === 0 ? (
+                <tr><td colSpan={subjectList.length * 2 + 4} className="p-20 text-center font-black uppercase text-gray-300 italic">No Assessment Data for {activeClass}</td></tr>
+              ) : pupils.map((pupil, rank) => (
                 <tr key={pupil.no} className={`${rank % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-yellow-50 transition`}>
                   <td className="p-2 border border-black font-black text-center text-sm">{rank + 1}</td>
                   <td className="p-2 border border-black text-left font-black uppercase px-3 truncate">{pupil.name}</td>
@@ -128,13 +96,9 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
         </>
       ) : (
         <div className="space-y-12">
-          {/* ... existing early childhood UI ... */}
+          <p className="text-center italic text-gray-400">Please switch to Daycare Master Sheet for Early Childhood Reporting.</p>
         </div>
       )}
-
-      <div className="mt-20 flex justify-end">
-        {/* ... existing signature ... */}
-      </div>
     </div>
   );
 };
