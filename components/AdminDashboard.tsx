@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { FILING_CABINET_STRUCTURE, DEPARTMENTS } from '../constants';
 import { FilingRecord, GlobalSettings, Student } from '../types';
 
@@ -15,7 +15,7 @@ interface Props {
 
 const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSettingsChange, students, onStudentsUpdate }) => {
   const [activeTab, setActiveTab] = useState<'filing' | 'promotion' | 'identity' | 'bulk' | 'excellence' | 'system'>('system');
-  const [path, setPath] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleSystemReset = () => {
     if (confirm("CRITICAL ACTION: This will wipe ALL student data and reset settings. This cannot be undone. Proceed?")) {
@@ -29,6 +29,87 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
     updated[mod] = !updated[mod];
     onSettingsChange({ ...settings, modulePermissions: updated });
     notify(`${mod} visibility updated.`, 'info');
+  };
+
+  const handleExportCSV = () => {
+    if (students.length === 0) {
+      notify("No student records found to export.", "error");
+      return;
+    }
+
+    const headers = ["ID", "SerialID", "FirstName", "Surname", "OtherNames", "DOB", "Sex", "Class", "Status", "FatherName", "MotherName"];
+    const rows = students.map(s => [
+      s.id,
+      s.serialId,
+      s.firstName,
+      s.surname,
+      s.others || "",
+      s.dob,
+      s.sex,
+      s.currentClass,
+      s.status,
+      s.father?.name || "",
+      s.mother?.name || ""
+    ]);
+
+    const csvContent = [headers, ...rows].map(e => e.map(val => `"${val}"`).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `UBA_Students_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    notify("Student ledger exported successfully!", "success");
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const lines = text.split("\n").filter(line => line.trim());
+      if (lines.length < 2) {
+        notify("Invalid CSV format.", "error");
+        return;
+      }
+
+      // Skip header
+      const importedStudents: Student[] = lines.slice(1).map(line => {
+        const parts = line.split(",").map(p => p.replace(/^"|"$/g, '').trim());
+        return {
+          id: parts[0] || crypto.randomUUID(),
+          serialId: parts[1] || `UBA-${Date.now().toString().slice(-4)}`,
+          firstName: parts[2] || "Unknown",
+          surname: parts[3] || "Student",
+          others: parts[4] || "",
+          dob: parts[5] || "",
+          sex: (parts[6] as any) || "Male",
+          currentClass: parts[7] || "Creche",
+          status: (parts[8] as any) || "Admitted",
+          createdAt: new Date().toISOString(),
+          father: { name: parts[9] || "", contact: "", occupation: "", education: "", religion: "", isDead: false },
+          mother: { name: parts[10] || "", contact: "", occupation: "", education: "", religion: "", isDead: false },
+          livesWith: 'Both Parents',
+          hasSpecialNeeds: false,
+          scoreDetails: {},
+          attendance: {},
+          payments: {}
+        } as Student;
+      });
+
+      if (confirm(`Detected ${importedStudents.length} student records. Overwrite existing ledger or append? (OK to Merge, Cancel to Overwrite)`)) {
+        onStudentsUpdate([...students, ...importedStudents]);
+      } else {
+        onStudentsUpdate(importedStudents);
+      }
+      notify("Data ingestion complete!", "success");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -53,7 +134,7 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-gray-50/30 p-10">
+        <div className="flex-1 overflow-y-auto bg-gray-50/30 p-10 min-h-[500px]">
           {activeTab === 'system' && (
             <div className="max-w-4xl mx-auto space-y-10">
               <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-xl">
@@ -75,7 +156,7 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
                   <h4 className="text-red-600 font-black uppercase text-xs mb-4">Danger Zone</h4>
                   <button 
                     onClick={handleSystemReset}
-                    className="bg-red-500 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:bg-red-600 transition"
+                    className="bg-red-50 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:bg-red-600 transition"
                   >
                     Reset System to Factory Default
                   </button>
@@ -128,11 +209,72 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
               </div>
             </div>
           )}
+
+          {activeTab === 'bulk' && (
+            <div className="max-w-4xl mx-auto space-y-8">
+              <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-xl space-y-10">
+                <div>
+                  <h3 className="text-2xl font-black text-[#0f3460] uppercase">Bulk Data Operations</h3>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Export/Import Student Records via CSV/Excel</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="p-8 bg-blue-50 rounded-[2rem] border border-blue-100 space-y-4">
+                    <h4 className="font-black text-[#0f3460] uppercase text-sm">Download Ledger</h4>
+                    <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                      Download the entire student database as a CSV file. This file can be opened in Microsoft Excel, Google Sheets, or any spreadsheet software.
+                    </p>
+                    <button 
+                      onClick={handleExportCSV}
+                      className="w-full bg-[#0f3460] text-white py-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:scale-[1.02] transition"
+                    >
+                      Export to CSV File
+                    </button>
+                  </div>
+
+                  <div className="p-8 bg-yellow-50 rounded-[2rem] border border-yellow-100 space-y-4">
+                    <h4 className="font-black text-[#cca43b] uppercase text-sm">Upload Ledger</h4>
+                    <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                      Import student data from a CSV file. Ensure the headers match the system format (Name, Class, Gender, etc.) for successful ingestion.
+                    </p>
+                    <div className="relative">
+                      <input 
+                        type="file" 
+                        accept=".csv" 
+                        ref={fileInputRef}
+                        onChange={handleImportCSV}
+                        className="hidden"
+                      />
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full bg-[#cca43b] text-[#0f3460] py-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:scale-[1.02] transition"
+                      >
+                        Choose File & Import
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                  <h5 className="text-[10px] font-black uppercase text-gray-400 mb-2">CSV Format Guide</h5>
+                  <p className="font-mono text-[9px] text-gray-600 break-all bg-white p-3 rounded-lg">
+                    ID, SerialID, FirstName, Surname, OtherNames, DOB, Sex, Class, Status, FatherName, MotherName
+                  </p>
+                  <p className="text-[9px] text-gray-400 mt-2 italic">* Use "Male" or "Female" for Sex. Status should be "Admitted" or "Pending".</p>
+                </div>
+              </div>
+            </div>
+          )}
           
-          {/* Promotion, Excellence, Bulk, Filing - Retain or expand from existing logic as needed */}
           {activeTab === 'excellence' && (
              <div className="bg-white p-10 rounded-[3rem] shadow-xl text-center">
                 <p className="text-gray-400 font-black uppercase italic text-sm">Academic Excellence Panel - Top 5 Performers Per Class</p>
+             </div>
+          )}
+
+          {activeTab === 'filing' && (
+             <div className="bg-white p-10 rounded-[3rem] shadow-xl text-center">
+                <p className="text-gray-400 font-black uppercase italic text-sm">Filing Cabinet - Institutional Record Retrieval</p>
              </div>
           )}
         </div>
