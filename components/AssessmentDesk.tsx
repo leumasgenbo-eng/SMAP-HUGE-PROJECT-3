@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { GlobalSettings, Student } from '../types';
 import { DAYCARE_PERIODS, DAYCARE_VENUES } from '../constants';
 import EditableField from './EditableField';
@@ -20,26 +20,67 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
   const [scaleType, setScaleType] = useState<2 | 3 | 5 | 9>(3);
   const [activeIndicator, setActiveIndicator] = useState(settings.activeIndicators[0] || '');
   const [selectedObserverId, setSelectedObserverId] = useState('');
+  const [activeNoteStudentId, setActiveNoteStudentId] = useState<string | null>(null);
+
+  // Track the previous scale to perform proportional conversion
+  const prevScaleRef = useRef<2 | 3 | 5 | 9>(3);
 
   const currentObserver = settings.observers.find(o => o.id === selectedObserverId) || { name: 'Unassigned', role: 'Staff' };
 
-  // --- LOGIC TO EXTRACT ALL RECORDED DATES FOR THIS INDICATOR ---
+  // Handle Rating System Change with Proportional Scaling
+  const handleScaleChange = (newScale: 2 | 3 | 5 | 9) => {
+    const oldScale = scaleType;
+    if (oldScale === newScale) return;
+
+    const updated = students.map(s => {
+      if (s.currentClass === activeClass && s.scoreDetails?.[activeIndicator]) {
+        const details = s.scoreDetails[activeIndicator];
+        const daily = details.dailyScores || {};
+        const newDaily: Record<string, number> = {};
+
+        // Recalibrate each daily entry
+        Object.entries(daily).forEach(([d, val]) => {
+          // NewValue = Round((OldValue / OldMax) * NewMax)
+          // Ensure we don't drop to 0 if original was > 0
+          const scaled = Math.round((val / oldScale) * newScale);
+          newDaily[d] = val > 0 ? Math.max(1, scaled) : 0;
+        });
+
+        const scores = Object.values(newDaily);
+        const sum = scores.reduce((a, b) => a + b, 0);
+        const count = scores.length || 1;
+        const avg = Math.round(sum / count);
+
+        return {
+          ...s,
+          scoreDetails: {
+            ...s.scoreDetails,
+            [activeIndicator]: {
+              ...details,
+              dailyScores: newDaily,
+              sectionA: avg,
+              total: avg
+            }
+          }
+        };
+      }
+      return s;
+    });
+
+    onStudentsUpdate(updated);
+    setScaleType(newScale);
+    notify(`Rating system recalibrated from ${oldScale} to ${newScale} points.`, "info");
+  };
+
   const historicalDates = useMemo(() => {
     const datesSet = new Set<string>();
     students.filter(s => s.currentClass === activeClass).forEach(s => {
       const daily = s.scoreDetails?.[activeIndicator]?.dailyScores;
       if (daily) Object.keys(daily).forEach(d => datesSet.add(d));
     });
-    // Always include the current entry date if it's being used for entry
     datesSet.add(date);
     return Array.from(datesSet).sort();
   }, [students, activeClass, activeIndicator, date]);
-
-  const getScaleLabel = (val: number) => {
-    if (scaleType === 2) return val === 1 ? 'Developing' : 'Achieved';
-    if (scaleType === 3) return val === 1 ? 'Developing' : val === 2 ? 'Achieving' : 'Advanced';
-    return val.toString();
-  };
 
   const handleScoreUpdate = (studentId: string, score: number, targetDate: string) => {
     if (!activeIndicator || !targetDate) {
@@ -59,7 +100,6 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
         const newDailyScores = { ...(currentDetails.dailyScores || {}), [targetDate]: score };
         const scores = Object.values(newDailyScores) as number[];
         
-        // Formula: Sum of all scores / Number of entries
         const sum = scores.reduce((a, b) => a + b, 0);
         const count = scores.length || 1;
         const avg = Math.round(sum / count);
@@ -110,21 +150,20 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
     }
 
     const filteredStudents = students.filter(s => s.currentClass === activeClass);
-    
-    // CSV Meta Info
     const metaRows = [
       ["Institution Name", settings.schoolName],
       ["Academic Year", settings.academicYear],
       ["Class", activeClass],
       ["Observer", currentObserver.name],
       ["Target Indicator", activeIndicator],
+      ["Rating System", `${scaleType}-Point Scale`],
       [], 
     ];
 
     const headers = [
       "Learner Full Name", 
       ...historicalDates.map((d, idx) => `${idx + 1}) Assessment Score (${d})`), 
-      "Entry Average (Sum/Times)", 
+      "Entry Average", 
       "Observation Notes"
     ];
 
@@ -157,8 +196,7 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
   const isLapsed = date && new Date(date).getTime() < new Date().setHours(0,0,0,0);
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* INSTITUTIONAL PARTICULARS - EDITABLE */}
+    <div className="space-y-6 animate-fadeIn relative">
       <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-4">
         <EditableField 
           value={settings.schoolName} 
@@ -182,33 +220,8 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
         <div className="bg-[#0f3460] px-8 py-2 rounded-full text-white font-black text-xs uppercase tracking-widest mt-4 shadow-lg">
           INDICATOR DATA ENTRY LEDGER
         </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 w-full pt-6 text-[10px] font-black uppercase text-gray-400 no-print">
-           <div className="flex flex-col gap-1 bg-gray-50 p-3 rounded-2xl border border-gray-100">
-              <span className="opacity-50">Academic Cycle</span>
-              <EditableField value={settings.academicYear} onSave={v => onSettingsChange({...settings, academicYear: v})} className="text-[#0f3460]" />
-           </div>
-           <div className="flex flex-col gap-1 bg-gray-50 p-3 rounded-2xl border border-gray-100">
-              <span className="opacity-50">Active Class</span>
-              <span className="text-[#0f3460] font-black">{activeClass}</span>
-           </div>
-           <div className="flex flex-col gap-1 bg-gray-50 p-3 rounded-2xl border border-gray-100">
-              <span className="opacity-50">Assessment Venue</span>
-              <select className="bg-transparent text-[#0f3460] text-center border-none font-black outline-none" value={venue} onChange={e => setVenue(e.target.value)}>
-                {DAYCARE_VENUES.map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-           </div>
-           <div className="flex flex-col gap-1 bg-gray-50 p-3 rounded-2xl border border-gray-100">
-              <span className="opacity-50">Primary Observer</span>
-              <select className="bg-transparent text-[#0f3460] text-center border-none font-black outline-none" value={selectedObserverId} onChange={e => setSelectedObserverId(e.target.value)}>
-                 <option value="">Select Observer...</option>
-                 {settings.observers.filter(o => o.active).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
-           </div>
-        </div>
       </div>
 
-      {/* ENTRY SETTINGS SECTION */}
       <div className="bg-[#0f3460] p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden no-print">
         <div className="relative z-10">
           <h2 className="text-3xl font-black uppercase tracking-tighter">Current Session Configuration</h2>
@@ -225,7 +238,11 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
              </div>
              <div className="flex flex-col gap-1">
                 <label className="text-[9px] font-black uppercase text-white/50">Rating System</label>
-                <select className="bg-white/10 p-2 rounded-xl border-white/20 font-black text-xs" value={scaleType} onChange={e => setScaleType(Number(e.target.value) as any)}>
+                <select 
+                  className="bg-white/10 p-2 rounded-xl border-white/20 font-black text-xs border-2 border-dashed border-[#cca43b]" 
+                  value={scaleType} 
+                  onChange={e => handleScaleChange(Number(e.target.value) as any)}
+                >
                    <option value={2}>2 Point (Developing / Achieved)</option>
                    <option value={3}>3 Point (D / A / A+)</option>
                    <option value={5}>5 Point (1-5 Scale)</option>
@@ -240,11 +257,6 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
              </div>
           </div>
         </div>
-        {isLapsed && (
-          <div className="absolute top-0 right-0 bg-red-600 text-white px-10 py-2 rotate-45 translate-x-12 translate-y-4 font-black text-[10px] shadow-lg">
-             HISTORICAL DATA VIEW
-          </div>
-        )}
       </div>
 
       <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100 overflow-x-auto">
@@ -265,11 +277,11 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                <th className="p-5 border-b border-gray-200">Learner Full Name</th>
                {historicalDates.map((d, idx) => (
                  <th key={d} className={`p-5 border-b border-gray-200 text-center ${d === date ? 'bg-blue-50 border-x border-blue-100' : ''}`}>
-                   {idx + 1}) Assessment Score ({d})
+                   {idx + 1}) Assessment ({d})
                  </th>
                ))}
-               <th className="p-5 border-b border-gray-200 text-center bg-gray-100">Entry Average (Sum/Times)</th>
-               <th className="p-5 border-b border-gray-200">Qualitative Observation Notes</th>
+               <th className="p-5 border-b border-gray-200 text-center bg-gray-100">Proportional Avg</th>
+               <th className="p-5 border-b border-gray-200">Observation Notes</th>
              </tr>
            </thead>
            <tbody>
@@ -330,33 +342,49 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                        <span className={`text-2xl font-black px-5 py-2 rounded-2xl shadow-inner ${avg >= (scaleType/2) ? 'text-[#2e8b57] bg-green-50' : 'text-orange-500 bg-orange-50'}`}>
                          {avg > 0 ? avg : '--'}
                        </span>
-                       <span className="text-[7px] font-black text-gray-400 uppercase mt-2 tracking-tighter">Based on {entriesCount} Log(s)</span>
+                       <span className="text-[7px] font-black text-gray-400 uppercase mt-2 tracking-tighter">Scaled Avg ({entriesCount} logs)</span>
                      </div>
                    </td>
-                   <td className="p-5">
-                     <textarea 
-                       className="w-full bg-transparent p-2 border-b border-gray-100 italic text-[11px] font-medium focus:ring-0 outline-none focus:border-[#cca43b] resize-none h-12" 
-                       placeholder="Observations..." 
-                       value={details?.facilitatorRemark || ''}
-                       onChange={(e) => handleNoteUpdate(s.id, e.target.value)}
-                     />
+                   <td className="p-5 relative">
+                     <div className="flex items-center gap-2">
+                        <textarea 
+                          className="flex-1 bg-transparent p-2 border-b border-gray-100 italic text-[11px] font-medium focus:ring-0 outline-none focus:border-[#cca43b] resize-none h-12" 
+                          placeholder="Observations..." 
+                          value={details?.facilitatorRemark || ''}
+                          onChange={(e) => handleNoteUpdate(s.id, e.target.value)}
+                        />
+                        <button 
+                          onClick={() => setActiveNoteStudentId(activeNoteStudentId === s.id ? null : s.id)}
+                          className="p-2 rounded-xl bg-gray-100 text-gray-400 hover:text-[#0f3460] transition shadow-sm"
+                        >
+                          📋
+                        </button>
+                     </div>
+                     {activeNoteStudentId === s.id && (
+                       <div className="absolute right-10 top-12 z-[200] w-72 bg-white rounded-[2rem] shadow-2xl border border-gray-100 p-6 max-h-60 overflow-y-auto animate-fadeIn">
+                          <p className="text-[9px] font-black uppercase text-gray-400 mb-4 border-b pb-2">Observation Note Registry</p>
+                          <div className="space-y-1">
+                             {(settings.popoutLists.observationNotes || []).map((note, idx) => (
+                               <button 
+                                  key={idx}
+                                  onClick={() => { handleNoteUpdate(s.id, note); setActiveNoteStudentId(null); }}
+                                  className="w-full text-left p-3 rounded-xl text-[10px] font-bold uppercase italic hover:bg-yellow-50 text-[#0f3460] transition border border-transparent hover:border-yellow-100"
+                               >
+                                  {note}
+                               </button>
+                             ))}
+                             {(!settings.popoutLists.observationNotes || settings.popoutLists.observationNotes.length === 0) && (
+                               <p className="text-[10px] text-gray-300 italic text-center py-4">No pre-configured notes found. Add some in Examination > Management Desk.</p>
+                             )}
+                          </div>
+                       </div>
+                     )}
                    </td>
                  </tr>
                );
              })}
            </tbody>
         </table>
-
-        <div className="mt-8 p-8 bg-blue-50 rounded-[3rem] border border-blue-100 flex flex-col md:flex-row justify-between items-center gap-6 no-print">
-           <div className="flex-1">
-              <h4 className="text-xs font-black text-blue-900 uppercase mb-2 tracking-widest">Entry Average Logic Disclosure</h4>
-              <p className="text-[10px] text-blue-700 italic leading-relaxed">
-                The cumulative average is derived by summing all recorded assessment scores for this specific indicator and dividing by the total number of sessions logged. 
-                This ensures a proportional representation of learner development over time.
-              </p>
-           </div>
-           <button onClick={() => notify("Ledger Synced successfully!", "success")} className="bg-[#0f3460] text-white px-12 py-4 rounded-2xl font-black uppercase text-xs shadow-2xl hover:scale-105 active:scale-95 transition">Sync All Records</button>
-        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 
-import { GradingScale, Student, Pupil, GlobalSettings, FacilitatorStats, EarlyChildhoodGradingConfig } from './types';
+import { GradingScale, Student, Pupil, GlobalSettings, FacilitatorStats, EarlyChildhoodGradeRange, EarlyChildhoodGradingConfig } from './types';
 import { CORE_SUBJECTS } from './constants';
 
 export const NRT_SCALE: GradingScale[] = [
@@ -14,10 +14,6 @@ export const NRT_SCALE: GradingScale[] = [
   { grade: "F9", value: 9, zScore: -999, remark: "Fail", color: "#e74c3c" },
 ];
 
-/**
- * Dynamic Multi-Point Rating System
- * Returns a score-based rating using population statistics (NRT approach)
- */
 export function getDevelopmentalRating(score: number, mean: number, stdDev: number, points: 2 | 3 | 5 | 9) {
   if (stdDev <= 0) return { label: "N/A", color: "#94a3b8", value: 0 };
   const z = (score - mean) / stdDev;
@@ -42,7 +38,6 @@ export function getDevelopmentalRating(score: number, mean: number, stdDev: numb
     return { label: "At Risk", color: "#e74c3c", value: 1 };
   }
 
-  // 9-point scale (matches NRT_SCALE logic)
   const gradeObj = NRT_SCALE.find(s => z >= s.zScore) || NRT_SCALE[8];
   return { label: gradeObj.grade, color: gradeObj.color, value: gradeObj.value };
 }
@@ -74,15 +69,33 @@ export function getNRTGrade(score: number, mean: number, stdDev: number, customR
   return { ...gradeData, remark: customRemarks?.[gradeData.grade] || gradeData.remark };
 }
 
+export function getNextClass(current: string): string {
+  const map: Record<string, string> = {
+    'Creche': 'N1', 'N1': 'N2', 'N2': 'KG1', 'KG1': 'KG2', 'KG2': 'Basic 1',
+    'Basic 1': 'Basic 2', 'Basic 2': 'Basic 3', 'Basic 3': 'Basic 4',
+    'Basic 4': 'Basic 5', 'Basic 5': 'Basic 6', 'Basic 6': 'Basic 7',
+    'Basic 7': 'Basic 8', 'Basic 8': 'Basic 9', 'Basic 9': 'SHS Graduate'
+  };
+  return map[current] || 'Next Grade';
+}
+
 export function processStudentData(students: Student[], settings: GlobalSettings, subjectList: string[]): Pupil[] {
+  // Stats for Subjects
   const stats = subjectList.map(subj => {
     const scores = students.map(s => (s.scoreDetails?.[subj]?.total || 0));
     return { name: subj, ...calculateStats(scores) };
   });
 
+  // Stats for Indicators (Dev Data)
+  const indicatorStats = (settings.activeIndicators || []).reduce((acc, ind) => {
+    const scores = students.map(s => (s.scoreDetails?.[ind]?.sectionA || 0));
+    acc[ind] = calculateStats(scores).mean;
+    return acc;
+  }, {} as Record<string, number>);
+
   const pupils: Pupil[] = students.map((s, idx) => {
     const computedScores = subjectList.map(subj => {
-      const details = s.scoreDetails?.[subj] || { total: 0 };
+      const details = s.scoreDetails?.[subj] || { total: 0, facilitatorRemark: '' };
       const stat = stats.find(st => st.name === subj)!;
       const gradeObj = getNRTGrade(details.total, stat.mean, stat.stdDev, settings.gradingSystemRemarks);
       
@@ -91,12 +104,13 @@ export function processStudentData(students: Student[], settings: GlobalSettings
         score: details.total,
         grade: gradeObj.grade,
         gradeValue: gradeObj.value,
+        interpretation: gradeObj.remark, // Word interpretation
         isCore: CORE_SUBJECTS.includes(subj),
         classAverage: stat.mean,
         facilitator: settings.facilitatorMapping?.[subj] || "N/A",
-        remark: generateSubjectRemark(details.total)
+        remark: details.facilitatorRemark || generateSubjectRemark(details.total)
       };
-    }).sort((a, b) => b.score - a.score);
+    }).sort((a, b) => b.score - a.score); // Performance Sorting
 
     const cores = computedScores.filter(sc => sc.isCore).sort((a, b) => a.gradeValue - b.gradeValue).slice(0, 4);
     const electives = computedScores.filter(sc => !sc.isCore).sort((a, b) => a.gradeValue - b.gradeValue).slice(0, 2);
@@ -115,20 +129,37 @@ export function processStudentData(students: Student[], settings: GlobalSettings
     const termAttendance = s.attendance?.[settings.currentTerm] || {};
     const presentCount = Object.values(termAttendance).filter(status => status === 'P').length;
 
-    return {
-      no: idx + 1,
-      name: `${s.firstName} ${s.surname}`,
-      scores: subjectList.reduce((acc, subj) => {
+    // Combine subject scores and indicator scores
+    const combinedScores = {
+      ...subjectList.reduce((acc, subj) => {
         acc[subj] = s.scoreDetails?.[subj]?.total || 0;
         return acc;
       }, {} as Record<string, number>),
+      ...(settings.activeIndicators || []).reduce((acc, ind) => {
+        acc[ind] = s.scoreDetails?.[ind]?.sectionA || 0;
+        return acc;
+      }, {} as Record<string, number>),
+      // Average metadata prefixing
+      ...Object.entries(indicatorStats).reduce((acc, [k, v]) => {
+        acc[`AVG_${k}`] = v;
+        return acc;
+      }, {} as Record<string, number>)
+    };
+
+    return {
+      no: idx + 1,
+      name: `${s.firstName} ${s.surname}`,
+      scores: combinedScores,
       aggregate,
       categoryCode: catCode,
       category: cat,
       computedScores,
       overallRemark: s.finalRemark || `Performance is ${cat.toLowerCase()}.`,
       recommendation: s.recommendation || "Continue with intensive review.",
-      attendance: presentCount.toString()
+      attendance: presentCount.toString(),
+      classSize: students.length,
+      isFeesCleared: !!s.isFeesCleared,
+      promotionStatus: s.promotionStatus
     };
   });
 

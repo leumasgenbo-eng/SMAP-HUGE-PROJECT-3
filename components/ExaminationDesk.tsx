@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { GlobalSettings, ExamTimeTableSlot, InvigilatorEntry } from '../types';
 import { BASIC_ROOMS, getSubjectsForDepartment } from '../constants';
@@ -12,7 +11,8 @@ interface Props {
 }
 
 const ExaminationDesk: React.FC<Props> = ({ settings, onSettingsChange, department, activeClass, notify }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'timetable' | 'invigilators'>('timetable');
+  const [activeSubTab, setActiveSubTab] = useState<'timetable' | 'invigilators' | 'management'>('timetable');
+  const [newItemTexts, setNewItemTexts] = useState<Record<string, string>>({});
   const subjects = getSubjectsForDepartment(department);
 
   const handleAddSlot = () => {
@@ -48,6 +48,25 @@ const ExaminationDesk: React.FC<Props> = ({ settings, onSettingsChange, departme
     onSettingsChange({ ...settings, invigilators: [...settings.invigilators, newInv] });
   };
 
+  const manageList = (listKey: keyof GlobalSettings['popoutLists'], item: string, action: 'add' | 'remove') => {
+    const updatedLists = { ...settings.popoutLists };
+    const currentList = updatedLists[listKey] as string[];
+
+    if (action === 'add') {
+      if (!item.trim()) return;
+      // Fix: Cast to any to handle mixed types in popoutLists union (string[] vs Record)
+      (updatedLists as any)[listKey] = [...currentList, item.trim()];
+      setNewItemTexts(prev => ({ ...prev, [listKey]: '' }));
+      notify(`Added to ${listKey.replace(/([A-Z])/g, ' $1')}`, "success");
+    } else {
+      // Fix: Cast to any to handle mixed types in popoutLists union (string[] vs Record)
+      (updatedLists as any)[listKey] = currentList.filter(i => i !== item);
+      notify(`Removed from ${listKey.replace(/([A-Z])/g, ' $1')}`, "info");
+    }
+
+    onSettingsChange({ ...settings, popoutLists: updatedLists });
+  };
+
   const shareInvitation = (inv: InvigilatorEntry) => {
     const msg = `Dear ${inv.facilitatorName || 'Facilitator'}, you are invited to invigilate ${inv.subject} as ${inv.role} at ${inv.venue} on ${inv.date} @ ${inv.time}. Click here to confirm: [CONFIRM_LINK]`;
     navigator.clipboard.writeText(msg);
@@ -74,6 +93,7 @@ const ExaminationDesk: React.FC<Props> = ({ settings, onSettingsChange, departme
         <div className="flex gap-2 bg-white/10 p-1 rounded-2xl">
           <button onClick={() => setActiveSubTab('timetable')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeSubTab === 'timetable' ? 'bg-[#cca43b] text-[#0f3460]' : ''}`}>Time Table</button>
           <button onClick={() => setActiveSubTab('invigilators')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeSubTab === 'invigilators' ? 'bg-[#cca43b] text-[#0f3460]' : ''}`}>Invigilators</button>
+          <button onClick={() => setActiveSubTab('management')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeSubTab === 'management' ? 'bg-[#cca43b] text-[#0f3460]' : ''}`}>Management Desk</button>
         </div>
       </div>
 
@@ -152,12 +172,9 @@ const ExaminationDesk: React.FC<Props> = ({ settings, onSettingsChange, departme
                   ))}
                 </tbody>
               </table>
-              <div className="p-4 bg-blue-50 text-[10px] text-blue-800 font-bold italic no-print">
-                Rule: Facilitators do not invigilate their own subject. Clash avoidance active based on Date/Time/Venue.
-              </div>
             </div>
           </div>
-        ) : (
+        ) : activeSubTab === 'invigilators' ? (
           <div className="space-y-8">
             <div className="flex justify-between items-center border-b pb-4 no-print">
               <h3 className="text-xl font-black text-[#0f3460] uppercase">Invigilators Deployment List</h3>
@@ -202,7 +219,7 @@ const ExaminationDesk: React.FC<Props> = ({ settings, onSettingsChange, departme
                             }}
                           >
                             <option value="">-- Select Staff --</option>
-                            {settings.staff.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                            {settings.staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                           </select>
                         </td>
                         <td className="p-4">
@@ -249,6 +266,53 @@ const ExaminationDesk: React.FC<Props> = ({ settings, onSettingsChange, departme
                   </tbody>
                </table>
             </div>
+          </div>
+        ) : (
+          <div className="space-y-12">
+             <div>
+                <h3 className="text-2xl font-black text-[#0f3460] uppercase tracking-tighter">Remark & Note Management Unit</h3>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Configure drop-down options for academic assessments</p>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                {[
+                  { key: 'facilitatorRemarks', label: 'Facilitator Remarks (Scores)', desc: 'Subject-specific feedback for individual learners' },
+                  { key: 'observationNotes', label: 'Observation Notes (Assessment)', desc: 'Detailed tracking for developmental indicators' },
+                  { key: 'generalRemarks', label: 'General Remarks (Report Cards)', desc: 'Holistic performance summaries' },
+                  { key: 'punctualityRemarks', label: 'Punctuality Remarks', desc: 'Comments for attendance registers' }
+                ].map(list => (
+                  <div key={list.key} className="bg-gray-50 p-8 rounded-[3rem] border border-gray-100 flex flex-col h-[500px]">
+                     <div className="border-b border-gray-200 pb-4 mb-4">
+                        <h4 className="font-black text-[#0f3460] uppercase text-sm">{list.label}</h4>
+                        <p className="text-[9px] text-gray-400 font-bold uppercase">{list.desc}</p>
+                     </div>
+                     
+                     <div className="flex-1 overflow-y-auto pr-2 space-y-2 mb-6">
+                        {(settings.popoutLists[list.key as keyof GlobalSettings['popoutLists']] as string[] || []).map((item, i) => (
+                           <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex justify-between items-center group">
+                              <span className="text-[10px] font-bold text-gray-600 uppercase italic">{item}</span>
+                              <button onClick={() => manageList(list.key as any, item, 'remove')} className="text-red-300 hover:text-red-500 font-black text-xs transition-colors">✕</button>
+                           </div>
+                        ))}
+                     </div>
+
+                     <div className="mt-auto space-y-3 pt-4 border-t border-gray-200">
+                        <textarea 
+                           className="w-full p-4 bg-white rounded-2xl border-none outline-none focus:ring-2 focus:ring-[#cca43b] text-[10px] font-bold shadow-inner resize-none h-20"
+                           placeholder="Type new remark here..."
+                           value={newItemTexts[list.key] || ''}
+                           onChange={e => setNewItemTexts({ ...newItemTexts, [list.key]: e.target.value })}
+                        />
+                        <button 
+                           onClick={() => manageList(list.key as any, newItemTexts[list.key], 'add')}
+                           className="w-full bg-[#0f3460] text-white py-4 rounded-2xl font-black uppercase text-[10px] shadow-lg hover:scale-[1.02] active:scale-95 transition"
+                        >
+                           Add to List
+                        </button>
+                     </div>
+                  </div>
+                ))}
+             </div>
           </div>
         )}
       </div>

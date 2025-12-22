@@ -33,11 +33,13 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
+  // Initialize students from LocalStorage (Browser Temporary Storage)
   const [students, setStudents] = useState<Student[]>(() => {
     const saved = localStorage.getItem('uba_students');
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Initialize settings from LocalStorage (Browser Temporary Storage)
   const [settings, setSettings] = useState<GlobalSettings>(() => {
     const saved = localStorage.getItem('uba_settings');
     const defaultSettings: GlobalSettings = {
@@ -52,6 +54,8 @@ const App: React.FC = () => {
       mockSeries: 'MOCK TWO',
       examStart: '2025-06-01',
       examEnd: '2025-06-15',
+      reopeningDate: '2025-09-08',
+      headteacherName: 'H. Baylor',
       totalAttendance: 85,
       modulePermissions: {},
       academicCalendar: {},
@@ -78,7 +82,11 @@ const App: React.FC = () => {
         extraCurricular: EXTRA_CURRICULAR,
         daycareDetails: DAYCARE_DETAILS,
         tlms: TLMS,
-        remarks: REMARKS_LIST
+        remarks: REMARKS_LIST,
+        observationNotes: ["Participated fully", "Needed assistance", "Exhibited leadership skills", "Followed instructions well"],
+        facilitatorRemarks: ["Shows keen interest", "Consistent effort", "Requires more practice", "Exceptional understanding"],
+        generalRemarks: ["Promoted with credit", "Needs improvement in core areas", "Satisfactory performance", "Maintains high standards"],
+        punctualityRemarks: ["Always early", "Maintains consistent arrival", "Regularly late", "Improved punctuality observed"]
       },
       gradingSystemRemarks: { "A1": "Excellent", "B2": "Very Good", "B3": "Good", "C4": "Credit", "C5": "Credit", "C6": "Credit", "D7": "Pass", "E8": "Pass", "F9": "Fail" },
       facilitatorMapping: {},
@@ -89,6 +97,15 @@ const App: React.FC = () => {
     return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
   });
 
+  // AUTO-SAVE TO BROWSER (TEMPORARY STORAGE)
+  // This effect runs every time students or settings change, keeping data in the browser.
+  useEffect(() => {
+    localStorage.setItem('uba_students', JSON.stringify(students));
+    localStorage.setItem('uba_settings', JSON.stringify(settings));
+    // Optional: Log to console for dev awareness
+    // console.log("Local browser storage updated.");
+  }, [students, settings]);
+
   // Cloud Hydration on Mount
   useEffect(() => {
     try {
@@ -98,7 +115,8 @@ const App: React.FC = () => {
         google.script.run.withSuccessHandler((cloudData: string) => {
           if (cloudData) {
             const parsed = JSON.parse(cloudData);
-            if (parsed.students) setStudents(parsed.students);
+            // Only overwrite if cloud data exists
+            if (parsed.students && parsed.students.length > 0) setStudents(parsed.students);
             if (parsed.settings) setSettings(parsed.settings);
             notify("Cloud data synchronized successfully.", "success");
           }
@@ -115,6 +133,7 @@ const App: React.FC = () => {
 
   const handleSave = () => {
     setIsSyncing(true);
+    // Explicitly update local storage one last time before cloud sync
     localStorage.setItem('uba_settings', JSON.stringify(settings));
     localStorage.setItem('uba_students', JSON.stringify(students));
 
@@ -162,7 +181,6 @@ const App: React.FC = () => {
   ])).filter(s => !(settings.disabledSubjects || []).includes(s));
 
   // --- CRITICAL FILTERING FOR CLASS SCOPE ---
-  // Only process students for the ACTIVE CLASS
   const classSpecificStudents = students.filter(s => s.status === 'Admitted' && s.currentClass === activeClass);
   const processedPupils = processStudentData(classSpecificStudents, settings, subjectList);
 
@@ -183,6 +201,12 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-6">
+           {/* Visual Indicator of temporary storage */}
+           <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 no-print">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-[10px] font-black uppercase text-white/80">Local Sync Active</span>
+           </div>
+
            <div className="bg-white/10 p-1 rounded-xl flex items-center gap-2 border border-white/20">
               <button onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.1))} className="w-8 h-8 rounded-lg hover:bg-white/20 font-black">-</button>
               <span className="text-[10px] font-black w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
@@ -281,15 +305,21 @@ const App: React.FC = () => {
                 <StaffManagement settings={settings} onSettingsChange={setSettings} department={activeTab} notify={notify} />
               ) : activeModule === 'Time Table' ? (
                 isEarlyChildhood ? (
-                  <ObservationDesk settings={settings} onSettingsChange={setSettings} activeClass={activeClass} notify={notify} />
+                  <DaycareTimeTable settings={settings} onSettingsChange={setSettings} activeClass={activeClass} notify={notify} />
                 ) : (
                   <GenericModule module="Time Table" department={activeTab} activeClass={activeClass} students={students} settings={settings} onSettingsChange={setSettings} notify={notify} />
                 )
               ) : activeModule === 'Examination' ? (
                 isEarlyChildhood ? (
-                  <ObservationDesk settings={settings} onSettingsChange={setSettings} activeClass={activeClass} notify={notify} />
+                   <div className="space-y-12">
+                      <ObservationDesk settings={settings} onSettingsChange={setSettings} activeClass={activeClass} notify={notify} />
+                      <ScoreEntry students={classSpecificStudents} onUpdate={(updated) => setStudents(prev => [...prev.filter(s => s.currentClass !== activeClass || s.status !== 'Admitted'), ...updated])} onSave={handleSave} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} department={activeTab} activeClass={activeClass} />
+                   </div>
                 ) : (
-                  <ExaminationDesk settings={settings} onSettingsChange={setSettings} department={activeTab} activeClass={activeClass} notify={notify} />
+                  <div className="space-y-12">
+                    <ExaminationDesk settings={settings} onSettingsChange={setSettings} department={activeTab} activeClass={activeClass} notify={notify} />
+                    <ScoreEntry students={classSpecificStudents} onUpdate={(updated) => setStudents(prev => [...prev.filter(s => s.currentClass !== activeClass || s.status !== 'Admitted'), ...updated])} onSave={handleSave} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} department={activeTab} activeClass={activeClass} />
+                  </div>
                 )
               ) : activeModule === 'Assessment' ? (
                 isEarlyChildhood ? (
@@ -301,24 +331,12 @@ const App: React.FC = () => {
                 <GenericModule module={activeModule} department={activeTab} activeClass={activeClass} students={students} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} notify={notify} />
               )}
               
+              {/* Reports Render Logic - Distinct from Data Entry Duplication */}
               {(activeModule === 'Examination' || activeModule === 'Assessment') && (
-                <div className="space-y-20">
-                   <ScoreEntry 
-                    students={classSpecificStudents} 
-                    onUpdate={(updatedClassList) => {
-                      const otherStudents = students.filter(s => s.currentClass !== activeClass || s.status !== 'Admitted');
-                      setStudents([...otherStudents, ...updatedClassList]);
-                    }} 
-                    onSave={handleSave} 
-                    settings={settings} 
-                    onSettingsChange={setSettings} 
-                    subjectList={subjectList} 
-                    department={activeTab} 
-                    activeClass={activeClass} 
-                   />
+                <div className="space-y-20 pt-10 border-t-4 border-dashed border-gray-200">
                    {isEarlyChildhood ? (
                       <>
-                        <DaycareMasterSheet pupils={processedPupils} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} activeClass={activeClass} />
+                        <DaycareMasterSheet students={classSpecificStudents} pupils={processedPupils} settings={settings} onSettingsChange={setSettings} subjectList={subjectList} activeClass={activeClass} />
                         <div className="grid grid-cols-1 gap-20">
                            {processedPupils.map(p => <DaycareReportCard key={p.no} pupil={p} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} activeClass={activeClass} />)}
                         </div>

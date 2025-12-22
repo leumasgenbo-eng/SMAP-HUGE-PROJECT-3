@@ -144,6 +144,8 @@ export interface Student {
   overallRemark?: string;
   finalRemark?: string;
   payments?: Record<string, any>;
+  isFeesCleared: boolean;
+  promotionStatus?: string;
 }
 
 export interface EarlyChildhoodGradeRange {
@@ -184,6 +186,8 @@ export interface GlobalSettings {
   mockSeries: string;
   examStart: string;
   examEnd: string;
+  reopeningDate: string;
+  headteacherName: string;
   totalAttendance: number;
   modulePermissions: Record<string, boolean>;
   academicCalendar: Record<number, AcademicCalendarWeek[]>;
@@ -215,6 +219,10 @@ export interface GlobalSettings {
     daycareDetails: Record<string, string[]>;
     tlms: string[];
     remarks: string[];
+    observationNotes: string[];
+    facilitatorRemarks: string[];
+    generalRemarks: string[];
+    punctualityRemarks: string[];
   };
   gradingSystemRemarks: Record<string, string>;
   facilitatorMapping: Record<string, string>;
@@ -306,6 +314,9 @@ export interface Pupil {
   overallRemark: string;
   recommendation: string;
   attendance: string;
+  classSize?: number;
+  isFeesCleared: boolean;
+  promotionStatus?: string;
 }
 
 export interface FacilitatorStats {

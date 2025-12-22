@@ -109,6 +109,24 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
                 </tr>
               ))}
             </tbody>
+            {pupils.length > 0 && (
+              <tfoot className="bg-yellow-50 font-black text-xs">
+                <tr>
+                  <td className="p-3 border border-black text-right uppercase" colSpan={2}>Class Average Score:</td>
+                  {stats.map(s => (
+                    <td key={s.name + '-mean'} className="p-2 border border-black text-center bg-yellow-100" colSpan={2}>{s.mean.toFixed(1)}</td>
+                  ))}
+                  <td className="p-2 border border-black text-center" colSpan={2}>-</td>
+                </tr>
+                <tr>
+                  <td className="p-3 border border-black text-right uppercase" colSpan={2}>Standard Deviation (σ):</td>
+                  {stats.map(s => (
+                    <td key={s.name + '-sd'} className="p-2 border border-black text-center" colSpan={2}>{s.stdDev.toFixed(2)}</td>
+                  ))}
+                  <td className="p-2 border border-black text-center" colSpan={2}>-</td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </>
       ) : (
