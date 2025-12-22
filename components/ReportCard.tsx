@@ -109,7 +109,9 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
           </div>
           
           <div className="bg-black text-white py-1 px-8 inline-block font-black text-sm rounded-sm uppercase tracking-widest flex items-center gap-2">
-            {isJHS ? settings.mockSeries : (
+            {isJHS ? (
+              <EditableField value={settings.mockSeries} onSave={v => onSettingsChange({...settings, mockSeries: v})} />
+            ) : (
               <div className="flex items-center">
                 TERM <EditableField 
                   value={settings.currentTerm.toString()} 
@@ -117,7 +119,11 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
                   className="bg-white/20 text-white min-w-[20px] px-1 ml-1" 
                 />
               </div>
-            )} PERFORMANCE REPORT
+            )} 
+            <EditableField 
+              value={settings.reportTitle || "PERFORMANCE REPORT"} 
+              onSave={v => onSettingsChange({...settings, reportTitle: v})} 
+            />
           </div>
         </div>
 
@@ -245,9 +251,13 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
                  className="text-center"
                />
              </div>
-             <div className="border-t-2 border-black pt-2">
+             <div className="border-t-2 border-black pt-2 text-center">
                <p className="text-[9px] font-black uppercase tracking-widest leading-none">Headteacher Signature / Stamp</p>
-               <p className="text-[7px] text-gray-400 mt-1 uppercase font-bold tracking-tighter">Certified Document of United Baylor Academy</p>
+               <EditableField 
+                 value={settings.reportFooterText || "Certified Document of United Baylor Academy"} 
+                 onSave={(v) => onSettingsChange({...settings, reportFooterText: v})}
+                 className="text-[7px] text-gray-400 mt-1 uppercase font-bold tracking-tighter"
+               />
              </div>
           </div>
         </div>

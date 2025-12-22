@@ -231,6 +231,8 @@ export interface GlobalSettings {
   exerciseEntries?: DailyExerciseEntry[];
   sbaConfigs: Record<string, Record<string, SBAConfig>>;
   sbaMarksLocked: boolean;
+  reportTitle?: string;
+  reportFooterText?: string;
 }
 
 export interface AcademicCalendarWeek {

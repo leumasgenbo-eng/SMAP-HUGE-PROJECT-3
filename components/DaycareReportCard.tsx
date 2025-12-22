@@ -107,7 +107,10 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
             </div>
           </div>
           <div className="bg-[#0f3460] text-white py-2 px-8 inline-block font-black text-sm rounded-lg uppercase tracking-widest">
-            EARLY CHILDHOOD PERFORMANCE REPORT
+            <EditableField 
+              value={settings.reportTitle || "EARLY CHILDHOOD PERFORMANCE REPORT"} 
+              onSave={v => onSettingsChange({...settings, reportTitle: v})} 
+            />
           </div>
         </div>
 
@@ -125,7 +128,12 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
           <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase w-24">Class:</span><span className="flex-1 border-b border-black text-center">{activeClass}</span></div>
           <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase w-24">No. on Roll:</span><span className="flex-1 border-b border-black text-center">{pupil.classSize || '--'}</span></div>
           <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase w-24">Attendance:</span><span className="flex-1 border-b border-black text-center">{pupil.attendance} / {settings.totalAttendance}</span></div>
-          <div className="flex gap-2 items-baseline font-black"><span className="text-[#cca43b] uppercase w-24">Reopening:</span><span className="flex-1 border-b border-black text-center">{settings.reopeningDate}</span></div>
+          <div className="flex gap-2 items-baseline font-black">
+            <span className="text-[#cca43b] uppercase w-24">Reopening:</span>
+            <span className="flex-1 border-b border-black text-center">
+              <EditableField value={settings.reopeningDate} onSave={v => onSettingsChange({...settings, reopeningDate: v})} />
+            </span>
+          </div>
         </div>
 
         <div className="mb-6">
@@ -242,9 +250,13 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
                     className="text-center"
                  />
                </div>
-               <div className="border-t-2 border-black pt-1">
+               <div className="border-t-2 border-black pt-1 text-center">
                  <p className="text-[9px] font-black uppercase tracking-widest leading-none">Headteacher Signature / Stamp</p>
-                 <p className="text-[7px] text-gray-400 font-bold uppercase mt-1">Official United Baylor Academy Seal</p>
+                 <EditableField 
+                    value={settings.reportFooterText || "Official United Baylor Academy Seal"} 
+                    onSave={(v) => onSettingsChange({...settings, reportFooterText: v})}
+                    className="text-[7px] text-gray-400 font-bold uppercase mt-1"
+                 />
                </div>
             </div>
           </div>
