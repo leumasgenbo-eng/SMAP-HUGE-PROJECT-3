@@ -27,29 +27,23 @@ export const BLOOM_TAXONOMY = ['Remembering', 'Understanding', 'Applying', 'Anal
 
 export const CORE_SUBJECTS = ["Mathematics", "English Language", "Science", "Social Studies", "History"];
 
-// Added ROLES export
 export const ROLES = {
   ADMIN: 'Administrator',
   FACILITATOR: 'Facilitator'
 } as const;
 
-// Added SUBJECT_ORDER export
 export const SUBJECT_ORDER = ["Mathematics", "English Language", "Science", "Social Studies", "History", "Religious and Moral education", "French", "Computing"];
 
-// Added ELECTIVE_SUBJECTS export
 export const ELECTIVE_SUBJECTS = ["Religious and Moral education", "French", "Career Technology", "Creative arts and designing", "Ghanaian Language", "Computing", "I.C.T"];
 
-// Added FILING_CABINET_STRUCTURE export
 export const FILING_CABINET_STRUCTURE = {
   'Academic Records': ['Terminal Reports', 'Broad Sheets', 'SBA Records'],
   'Staff Records': ['Deployment', 'Appraisal', 'Attendance'],
   'Student Records': ['Admission', 'Withdrawal', 'Special Needs']
 };
 
-// Added DAYCARE_SUBJECTS export
 export const DAYCARE_SUBJECTS = ["Language & Literacy", "Numeracy", "OWOP", "Creative Activity"];
 
-// Added LESSON_PLAN_WEIGHTS export
 export const LESSON_PLAN_WEIGHTS = {
   "Preparation": 15,
   "Content Delivery": 35,
@@ -64,12 +58,22 @@ export function getSubjectsForDepartment(dept: string): string[] {
     "Religious and Moral education", "French", "Career Technology", 
     "Creative arts and designing", "Ghanaian Language", "Computing"
   ];
+  if (dept === 'Lower') return [
+    "Mathematics", "English Language", "Science", "History", 
+    "Our World Our People", "French", "Creative Arts", 
+    "Ghanaian Language", "Computing"
+  ];
+  if (dept === 'Upper') return [
+    "Mathematics", "English Language", "Science", "History", 
+    "Religious and Moral Education", "French", "Creative Arts", 
+    "Ghanaian Language", "Computing"
+  ];
   if (dept.includes('Basic')) return [
     "Mathematics", "English Language", "Science", "History", 
     "Religious and Moral education", "French", "Creative arts", 
-    "Ghanaian Language", "I.C.T"
+    "Ghanaian Language", "Computing"
   ];
-  if (dept === 'D&N') return ["Language & Literacy", "Numeracy", "OWOP", "Creative Activity"];
+  if (dept === 'D&N' || dept === 'KG') return ["Language & Literacy", "Numeracy", "OWOP", "Creative Activity"];
   return ["General"];
 }
 

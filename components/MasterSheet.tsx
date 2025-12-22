@@ -1,9 +1,8 @@
 
 import React from 'react';
-import { Pupil, GlobalSettings, EarlyChildhoodGradingConfig, EarlyChildhoodGradeRange } from '../types';
-import { NRT_SCALE, calculateStats, getNRTGrade } from '../utils';
+import { Pupil, GlobalSettings } from '../types';
+import { calculateStats, getNRTGrade } from '../utils';
 import EditableField from './EditableField';
-import { EC_DEFAULT_GRADES } from '../constants';
 
 interface Props {
   pupils: Pupil[];
@@ -21,7 +20,6 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
   });
 
   const isEarlyChildhood = department === 'Daycare' || department === 'Nursery' || department === 'KG' || department === 'D&N';
-
   const isJHS = department === 'JHS';
   
   const displayExamTitle = (isJHS || settings.mockSeries) 
@@ -31,14 +29,31 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
   return (
     <div className="bg-white p-4 md:p-12 shadow-2xl border border-gray-100 min-w-max animate-fadeIn">
       <div className="text-center mb-12 border-b-4 border-double border-[#0f3460] pb-8">
-        <EditableField value={settings.schoolName} onSave={v => onSettingsChange({...settings, schoolName: v})} className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-2" />
+        <EditableField 
+          value={settings.schoolName} 
+          onSave={v => onSettingsChange({...settings, schoolName: v})} 
+          className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-2" 
+        />
         
         <div className="flex justify-center gap-4 text-sm font-bold text-gray-500 mb-4">
-          <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} className="uppercase" />
+          <EditableField 
+            value={settings.address} 
+            onSave={v => onSettingsChange({...settings, address: v})} 
+            className="uppercase" 
+            placeholder="Address..."
+          />
           <span>|</span>
-          <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
+          <EditableField 
+            value={settings.telephone} 
+            onSave={v => onSettingsChange({...settings, telephone: v})} 
+            placeholder="Telephone..."
+          />
           <span>|</span>
-          <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
+          <EditableField 
+            value={settings.email} 
+            onSave={v => onSettingsChange({...settings, email: v})} 
+            placeholder="Email..."
+          />
         </div>
 
         <p className="text-xl font-black text-[#0f3460] uppercase mb-1">{displayExamTitle}</p>

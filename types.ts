@@ -134,6 +134,9 @@ export interface Student {
     sectionA?: number; // CAT 1 or Indicator Avg
     sectionB?: number; // CAT 3 or Observation Score
     sectionC?: number; // CAT 2 (Group)
+    examScore?: number; // End of term exam score
+    mockObj?: number; // Mock Section A
+    mockTheory?: number; // Mock Section B
     dailyScores?: Record<string, number>; // Date -> Score
   }>;
   attendance: Record<string, Record<string, string>>;
