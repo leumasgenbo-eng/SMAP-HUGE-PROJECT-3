@@ -16,6 +16,15 @@ interface Props {
 const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSettingsChange, students, onStudentsUpdate }) => {
   const [activeTab, setActiveTab] = useState<'filing' | 'promotion' | 'identity' | 'bulk' | 'excellence' | 'system'>('system');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Memoized stats to simplify JSX and prevent redundant filtering during render
+  const promotableCount = useMemo(() => 
+    students.filter(s => s.status === 'Admitted' && s.isFeesCleared).length, 
+  [students]);
+
+  const withheldCount = useMemo(() => 
+    students.filter(s => s.status === 'Admitted' && !s.isFeesCleared).length, 
+  [students]);
   
   const handleSystemReset = () => {
     if (confirm("CRITICAL ACTION: This will wipe ALL student data and reset settings. This cannot be undone. Proceed?")) {
@@ -37,7 +46,8 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
     const updatedStudents = students.map(s => {
       if (s.status !== 'Admitted') return s;
 
-      const subjectList = getSubjectsForDepartment(s.currentClass.includes('Basic 7') || s.currentClass.includes('Basic 8') || s.currentClass.includes('Basic 9') ? 'JHS' : 'Lower');
+      const isJHS = s.currentClass.includes('Basic 7') || s.currentClass.includes('Basic 8') || s.currentClass.includes('Basic 9');
+      const subjectList = getSubjectsForDepartment(isJHS ? 'JHS' : 'Lower');
       const allPassed = subjectList.every(subj => (s.scoreDetails?.[subj]?.total || 0) >= 50);
       
       const termAttendance = s.attendance?.[settings.currentTerm] || {};
@@ -111,7 +121,7 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
         return;
       }
 
-      // Skip header
+      // Skip header and map lines
       const importedStudents: Student[] = lines.slice(1).map(line => {
         const parts = line.split(",").map(p => p.replace(/^"|"$/g, '').trim());
         return {
@@ -133,7 +143,11 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
           hasSpecialNeeds: false,
           scoreDetails: {},
           attendance: {},
-          payments: {}
+          payments: {},
+          conduct: "Satisfactory",
+          interest: "High Interest",
+          attitude: "Positive",
+          punctuality: "Regular & Punctual"
         } as Student;
       });
 
@@ -180,12 +194,12 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
                      <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100">
                         <h4 className="text-[10px] font-black uppercase text-blue-900 mb-2">Promotable Pool</h4>
-                        <p className="text-4xl font-black text-blue-600">{students.filter(s => s.status === 'Admitted' && s.isFeesCleared).length}</p>
+                        <p className="text-4xl font-black text-blue-600">{promotableCount}</p>
                         <p className="text-[9px] font-bold text-blue-400 uppercase mt-1">Learners with cleared fees</p>
                      </div>
                      <div className="p-6 bg-red-50 rounded-2xl border border-red-100">
                         <h4 className="text-[10px] font-black uppercase text-red-900 mb-2">Withheld Pool</h4>
-                        <p className="text-4xl font-black text-red-600">{students.filter(s => s.status === 'Admitted' && !s.isFeesCleared).length}</p>
+                        <p className="text-4xl font-black text-red-600">{withheldCount}</p>
                         <p className="text-[9px] font-bold text-red-400 uppercase mt-1">Learners requiring fee clearance</p>
                      </div>
                   </div>
