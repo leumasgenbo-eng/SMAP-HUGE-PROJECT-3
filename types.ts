@@ -143,6 +143,10 @@ export interface Student {
   recommendation?: string;
   overallRemark?: string;
   finalRemark?: string;
+  conduct?: string;
+  interest?: string;
+  attitude?: string;
+  punctuality?: string;
   payments?: Record<string, any>;
   isFeesCleared: boolean;
   promotionStatus?: string;
@@ -319,6 +323,10 @@ export interface Pupil {
   classSize?: number;
   isFeesCleared: boolean;
   promotionStatus?: string;
+  conduct?: string;
+  interest?: string;
+  attitude?: string;
+  punctuality?: string;
 }
 
 export interface FacilitatorStats {

@@ -159,7 +159,11 @@ export function processStudentData(students: Student[], settings: GlobalSettings
       attendance: presentCount.toString(),
       classSize: students.length,
       isFeesCleared: !!s.isFeesCleared,
-      promotionStatus: s.promotionStatus
+      promotionStatus: s.promotionStatus,
+      conduct: s.conduct || "Satisfactory",
+      interest: s.interest || "High Interest",
+      attitude: s.attitude || "Positive",
+      punctuality: s.punctuality || "Regular & Punctual"
     };
   });
 
