@@ -215,6 +215,7 @@ export interface GlobalSettings {
   activeIndicators: string[];
   exerciseEntries?: DailyExerciseEntry[];
   sbaConfigs: Record<string, Record<string, SBAConfig>>;
+  sbaMarksLocked: boolean;
 }
 
 export interface AcademicCalendarWeek {

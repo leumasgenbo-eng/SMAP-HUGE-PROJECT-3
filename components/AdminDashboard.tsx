@@ -152,6 +152,28 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
                     </label>
                   ))}
                 </div>
+
+                <div className="mt-12 pt-12 border-t border-gray-100">
+                  <h3 className="text-2xl font-black text-[#0f3460] mb-6 uppercase">Assessment Controls</h3>
+                  <div className="bg-blue-50 p-6 rounded-[2rem] border border-blue-100 flex items-center justify-between">
+                     <div className="space-y-1">
+                        <h4 className="text-sm font-black text-blue-900 uppercase">Lock SBA Marks Allocation</h4>
+                        <p className="text-[10px] font-bold text-blue-700/60 uppercase">Prevents Subject Facilitators from altering mark weightings</p>
+                     </div>
+                     <button 
+                        onClick={() => {
+                          onSettingsChange({...settings, sbaMarksLocked: !settings.sbaMarksLocked});
+                          notify(settings.sbaMarksLocked ? "SBA Weights UNLOCKED" : "SBA Weights LOCKED", "info");
+                        }}
+                        className={`w-16 h-8 rounded-full transition-all relative ${settings.sbaMarksLocked ? 'bg-red-500' : 'bg-gray-300'}`}
+                     >
+                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md flex items-center justify-center ${settings.sbaMarksLocked ? 'left-9' : 'left-1'}`}>
+                           {settings.sbaMarksLocked ? '🔒' : '🔓'}
+                        </div>
+                     </button>
+                  </div>
+                </div>
+
                 <div className="mt-12 pt-12 border-t border-red-100">
                   <h4 className="text-red-600 font-black uppercase text-xs mb-4">Danger Zone</h4>
                   <button 

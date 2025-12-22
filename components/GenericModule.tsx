@@ -287,6 +287,16 @@ const GenericModule: React.FC<Props> = ({ module, department, activeClass, stude
           <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
         </div>
 
+        {settings.sbaMarksLocked && (
+          <div className="bg-red-50 p-6 rounded-[2rem] border border-red-100 flex items-center gap-4">
+             <span className="text-3xl">🔒</span>
+             <div>
+                <h4 className="text-sm font-black text-red-900 uppercase">Weightings Locked by Administration</h4>
+                <p className="text-[10px] font-bold text-red-700/60 uppercase">Marks allocation cannot be modified at the Subject Level currently.</p>
+             </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
            {[
              { id: 1, label: 'CAT 1 (INDIVIDUAL)', date: sbaConfig.cat1Date, field: 'cat1Date', marks: sbaConfig.cat1Marks, marksField: 'cat1Marks' },
@@ -302,7 +312,13 @@ const GenericModule: React.FC<Props> = ({ module, department, activeClass, stude
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-black uppercase text-gray-400">Marks Allocation</label>
-                    <input type="number" className="w-full p-3 rounded-xl bg-white border-none font-bold" value={cat.marks} onChange={e => handleSbaUpdate(cat.marksField as any, parseInt(e.target.value))} />
+                    <input 
+                      type="number" 
+                      disabled={settings.sbaMarksLocked}
+                      className={`w-full p-3 rounded-xl bg-white border-none font-bold ${settings.sbaMarksLocked ? 'opacity-50 cursor-not-allowed text-gray-400' : ''}`} 
+                      value={cat.marks} 
+                      onChange={e => handleSbaUpdate(cat.marksField as any, parseInt(e.target.value))} 
+                    />
                   </div>
                 </div>
              </div>

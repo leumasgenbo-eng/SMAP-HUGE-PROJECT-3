@@ -81,7 +81,8 @@ const App: React.FC = () => {
       gradingSystemRemarks: { "A1": "Excellent", "B2": "Very Good", "B3": "Good", "C4": "Credit", "C5": "Credit", "C6": "Credit", "D7": "Pass", "E8": "Pass", "F9": "Fail" },
       facilitatorMapping: {},
       submittedSubjects: [],
-      activeIndicators: Object.values(DAYCARE_ACTIVITY_GROUPS).flat()
+      activeIndicators: Object.values(DAYCARE_ACTIVITY_GROUPS).flat(),
+      sbaMarksLocked: false
     };
     return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
   });
