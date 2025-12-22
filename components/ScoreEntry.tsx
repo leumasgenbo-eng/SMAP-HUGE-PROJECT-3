@@ -22,6 +22,19 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
 
   const isEarlyChildhood = department === 'Daycare' || department === 'Nursery' || department === 'KG' || department === 'D&N';
   const isBasic9 = activeClass === 'Basic 9';
+
+  // Retrieve SBA Configuration for the current class and subject to use as thresholds
+  const sbaConfig = settings.sbaConfigs?.[activeClass]?.[selectedSubject] || {
+    cat1: { marks: 30 },
+    cat2: { marks: 40 },
+    cat3: { marks: 30 }
+  };
+
+  const thresholds = {
+    sectionA: sbaConfig.cat1?.marks || 30, // CAT 1,4,7 (Ind)
+    sectionC: sbaConfig.cat2?.marks || 40, // CAT 2,5,8 (Grp)
+    sectionB: sbaConfig.cat3?.marks || 30, // CAT 3,6,9 (Ind)
+  };
   
   const handleScoreChange = (id: string, section: 'sectionA' | 'sectionB' | 'sectionC', val: number) => {
     const updated = students.map(s => {
@@ -37,13 +50,15 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
         };
         const details = { ...currentDetails };
         
-        if (section === 'sectionA') details.sectionA = Math.min(val, 100);
-        if (section === 'sectionB') details.sectionB = Math.min(val, 100);
-        if (section === 'sectionC') details.sectionC = Math.min(val, 100);
+        // Apply thresholds from SBA Config
+        if (section === 'sectionA') details.sectionA = Math.min(val, thresholds.sectionA);
+        if (section === 'sectionB') details.sectionB = Math.min(val, thresholds.sectionB);
+        if (section === 'sectionC') details.sectionC = Math.min(val, thresholds.sectionC);
         
         if (isEarlyChildhood) {
           details.total = Math.round(((details.sectionA || 0) + (details.sectionB || 0)) / 2);
         } else if (activeTab === 'mock') {
+          // Mocks usually have their own standard (e.g. 30/70) but we respect the logic
           details.total = Math.min((details.sectionA || 0) + (details.sectionB || 0), 100);
         } else {
           details.total = Math.min((details.sectionA || 0) + (details.sectionB || 0) + (details.sectionC || 0), 100);
@@ -71,7 +86,8 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
         details.dailyScores = { ...(details.dailyScores || {}), [date]: score };
         
         const scores = Object.values(details.dailyScores);
-        details.sectionA = Math.round(scores.reduce((a, b) => a + b, 0) / (scores.length || 1));
+        // Daily average is capped by CAT 1 threshold as it feeds into sectionA
+        details.sectionA = Math.min(Math.round(scores.reduce((a, b) => a + b, 0) / (scores.length || 1)), thresholds.sectionA);
         
         return { ...s, scoreDetails: { ...(s.scoreDetails || {}), [selectedSubject]: details } };
       }
@@ -98,6 +114,9 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                    className="ml-2 bg-transparent text-white border-none p-0 inline-block w-auto"
                  />
                )}
+             </div>
+             <div className="bg-blue-50 text-blue-800 px-4 py-1.5 rounded-full text-[9px] font-bold uppercase border border-blue-100">
+               Allocation: {thresholds.sectionA} | {thresholds.sectionC} | {thresholds.sectionB}
              </div>
           </div>
         </div>
@@ -129,14 +148,14 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                 <th className="p-6 text-left">Pupil Name</th>
                 {activeTab === 'mock' ? (
                   <>
-                    <th className="p-6 text-center">Section A</th>
-                    <th className="p-6 text-center">Section B</th>
+                    <th className="p-6 text-center">Section A (30)</th>
+                    <th className="p-6 text-center">Section B (70)</th>
                   </>
                 ) : !isEarlyChildhood ? (
                   <>
-                    <th className="p-6 text-center">CAT 1,4,7 (Ind)</th>
-                    <th className="p-6 text-center">CAT 2,5,8 (Grp)</th>
-                    <th className="p-6 text-center">CAT 3,6,9 (Ind)</th>
+                    <th className="p-6 text-center">CAT 1,4,7 ({thresholds.sectionA})</th>
+                    <th className="p-6 text-center">CAT 2,5,8 ({thresholds.sectionC})</th>
+                    <th className="p-6 text-center">CAT 3,6,9 ({thresholds.sectionB})</th>
                   </>
                 ) : (
                   <>
@@ -159,24 +178,24 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                     {activeTab === 'mock' ? (
                       <>
                         <td className="p-6 text-center">
-                          <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionA} onChange={e => handleScoreChange(s.id, 'sectionA', parseInt(e.target.value) || 0)} />
+                          <input type="number" max={30} className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionA} onChange={e => handleScoreChange(s.id, 'sectionA', parseInt(e.target.value) || 0)} />
                         </td>
                         <td className="p-6 text-center">
-                          <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionB} onChange={e => handleScoreChange(s.id, 'sectionB', parseInt(e.target.value) || 0)} />
+                          <input type="number" max={70} className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionB} onChange={e => handleScoreChange(s.id, 'sectionB', parseInt(e.target.value) || 0)} />
                         </td>
                       </>
                     ) : (
                       <>
                         <td className="p-6 text-center">
-                          <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionA} onChange={e => handleScoreChange(s.id, 'sectionA', parseInt(e.target.value) || 0)} />
+                          <input type="number" max={thresholds.sectionA} className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionA} onChange={e => handleScoreChange(s.id, 'sectionA', parseInt(e.target.value) || 0)} />
                         </td>
                         {!isEarlyChildhood && (
                           <td className="p-6 text-center">
-                            <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionC} onChange={e => handleScoreChange(s.id, 'sectionC', parseInt(e.target.value) || 0)} />
+                            <input type="number" max={thresholds.sectionC} className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionC} onChange={e => handleScoreChange(s.id, 'sectionC', parseInt(e.target.value) || 0)} />
                           </td>
                         )}
                         <td className="p-6 text-center">
-                          <input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionB} onChange={e => handleScoreChange(s.id, 'sectionB', parseInt(e.target.value) || 0)} />
+                          <input type="number" max={thresholds.sectionB} className="w-16 bg-gray-50 p-2 rounded-xl text-center font-black" value={details.sectionB} onChange={e => handleScoreChange(s.id, 'sectionB', parseInt(e.target.value) || 0)} />
                         </td>
                       </>
                     )}
@@ -216,10 +235,10 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                   return (
                     <tr key={s.id} className="border-b hover:bg-gray-50 transition">
                       <td className="p-4 font-black uppercase text-[#0f3460]">{s.firstName} {s.surname}</td>
-                      <td className="p-4 text-center font-bold text-gray-400">100</td>
+                      <td className="p-4 text-center font-bold text-gray-400">{thresholds.sectionA}</td>
                       <td className="p-4 text-center font-bold text-gray-400">{dailyCount} Entries</td>
                       <td className="p-4 text-center font-black text-lg text-[#cca43b]">{details?.sectionA || 0}</td>
-                      <td className="p-4 text-center font-black text-xl text-[#2e8b57] bg-blue-50/30">{details?.sectionA || 0}%</td>
+                      <td className="p-4 text-center font-black text-xl text-[#2e8b57] bg-blue-50/30">{Math.round(((details?.sectionA || 0) / thresholds.sectionA) * 100)}%</td>
                     </tr>
                   );
                 })}
@@ -253,10 +272,11 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                     {students.map(s => (
                       <tr key={s.id} className="border-b hover:bg-yellow-50/30">
                         <td className="p-4 font-black uppercase">{s.firstName} {s.surname}</td>
-                        <td className="p-4 text-center font-bold text-gray-300">100</td>
+                        <td className="p-4 text-center font-bold text-gray-300">{thresholds.sectionA}</td>
                         <td className="p-4 text-center">
                           <input 
                             type="number" 
+                            max={thresholds.sectionA}
                             className="w-24 bg-gray-50 p-3 rounded-xl text-center font-black outline-none focus:ring-2 focus:ring-[#cca43b] shadow-inner" 
                             value={s.scoreDetails?.[selectedSubject]?.dailyScores?.[newDate] || 0} 
                             onChange={e => handleDailyScoreUpdate(s.id, newDate, parseInt(e.target.value) || 0)} 
@@ -271,7 +291,7 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                </table>
             </div>
             <div className="p-8 bg-gray-50 border-t flex justify-between items-center">
-              <p className="text-[10px] font-bold text-gray-400 italic">Scores are auto-averaged into the cumulative Daily Indicator Avg.</p>
+              <p className="text-[10px] font-bold text-gray-400 italic">Scores are auto-averaged and capped by the CAT 1 threshold ({thresholds.sectionA}).</p>
               <button onClick={() => setShowDailyPopout(false)} className="bg-[#0f3460] text-white px-12 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition">Sync with Broad Sheet</button>
             </div>
           </div>
