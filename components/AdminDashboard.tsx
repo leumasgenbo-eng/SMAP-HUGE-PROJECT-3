@@ -169,7 +169,7 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
         <div className="bg-[#0f3460] p-8 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
             <h2 className="text-3xl font-black uppercase tracking-tighter">Administration Desk</h2>
-            <p className="text-[10px] font-bold text-[#cca43b] uppercase tracking-widest mt-1">Management & System Permissions</p>
+            <p className="text-[10px] font-bold text-[#cca43b] uppercase tracking-widest mt-1">Management &amp; System Permissions</p>
           </div>
           <div className="flex flex-wrap bg-white/10 p-1.5 rounded-2xl gap-2">
              {['system', 'identity', 'promotion', 'excellence', 'bulk', 'filing'].map(t => (
@@ -189,9 +189,7 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
             <div className="max-w-4xl mx-auto space-y-10">
                <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-xl">
                   <h3 className="text-2xl font-black text-[#0f3460] mb-4 uppercase">Automated Promotion Engine</h3>
-                  <p className="text-sm text-gray-500 mb-8 italic">
-                    {'Criteria: (Pass All Subjects) & (Attend >= 95%) & (Fees Cleared)'}
-                  </p>
+                  <p className="text-sm text-gray-500 mb-8 italic">Criteria: (Pass All Subjects) &amp; (Attend &gt;= 95%) &amp; (Fees Cleared)</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
                      <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100">
@@ -272,7 +270,7 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
              <div className="p-10 max-w-4xl mx-auto space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-lg text-center">
-                  <h4 className="text-[10px] font-black uppercase text-gray-400 mb-6 tracking-widest">Logo & Branding</h4>
+                  <h4 className="text-[10px] font-black uppercase text-gray-400 mb-6 tracking-widest">Logo &amp; Branding</h4>
                   <div className="w-48 h-48 bg-gray-50 border-2 border-dashed border-gray-200 mx-auto rounded-[2rem] flex items-center justify-center relative overflow-hidden group">
                     {settings.logo ? (
                       <img src={settings.logo} className="w-full h-full object-contain p-4" alt="Logo" />
@@ -360,7 +358,7 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
                         onClick={() => fileInputRef.current?.click()}
                         className="w-full bg-[#cca43b] text-[#0f3460] py-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:scale-[1.02] transition"
                       >
-                        Choose File & Import
+                        Choose File &amp; Import
                       </button>
                     </div>
                   </div>

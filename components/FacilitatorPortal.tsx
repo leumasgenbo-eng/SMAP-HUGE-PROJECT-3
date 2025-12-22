@@ -104,7 +104,7 @@ const FacilitatorPortal: React.FC<PortalProps> = ({ notify, challenges = [], dep
             
             <div className="flex justify-end gap-4 mt-8">
               <button className="px-8 py-3 rounded-2xl font-black text-xs uppercase text-gray-500 hover:bg-gray-100 transition">Save Draft</button>
-              <button onClick={handleSubmit} className="bg-[#2e8b57] text-white px-12 py-3 rounded-2xl font-black uppercase text-xs shadow-xl hover:scale-[1.05] active:scale-95 transition tracking-widest">Confirm & Finalize Submission</button>
+              <button onClick={handleSubmit} className="bg-[#2e8b57] text-white px-12 py-3 rounded-2xl font-black uppercase text-xs shadow-xl hover:scale-[1.05] active:scale-95 transition tracking-widest">Confirm &amp; Finalize Submission</button>
             </div>
           </div>
         </div>

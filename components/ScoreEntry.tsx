@@ -154,7 +154,7 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
           <div className="flex-1">
             <h2 className="text-4xl font-black text-[#0f3460] uppercase tracking-tighter">Result Management Hub</h2>
             <div className="flex gap-4 mt-4">
-              <button onClick={() => { setPrimaryMode('sba'); setActiveTab('term'); }} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-md ${primaryMode === 'sba' ? 'bg-[#0f3460] text-white' : 'bg-gray-100 text-gray-400'}`}>SBA & Continuous Assessment</button>
+              <button onClick={() => { setPrimaryMode('sba'); setActiveTab('term'); }} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-md ${primaryMode === 'sba' ? 'bg-[#0f3460] text-white' : 'bg-gray-100 text-gray-400'}`}>SBA &amp; Continuous Assessment</button>
               <button onClick={() => { setPrimaryMode('finals'); setActiveTab('exam'); }} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-md ${primaryMode === 'finals' ? 'bg-[#cca43b] text-[#0f3460]' : 'bg-gray-100 text-gray-400'}`}>End-of-Cycle Entry</button>
             </div>
           </div>

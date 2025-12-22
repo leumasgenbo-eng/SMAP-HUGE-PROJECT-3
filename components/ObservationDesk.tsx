@@ -71,7 +71,7 @@ const ObservationDesk: React.FC<Props> = ({ settings, onSettingsChange, activeCl
       <div className="bg-[#cca43b] p-8 rounded-[3rem] text-[#0f3460] shadow-2xl flex justify-between items-center no-print">
         <div>
           <EditableField value={settings.schoolName} onSave={(v) => onSettingsChange({...settings, schoolName: v})} className="text-3xl font-black uppercase tracking-tighter" />
-          <p className="text-[10px] font-bold uppercase tracking-widest mt-1">Observation & Development Desk • {activeClass}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest mt-1">Observation &amp; Development Desk • {activeClass}</p>
         </div>
         <div className="flex gap-2 bg-white/20 p-1 rounded-2xl">
           <button onClick={() => setActiveSubTab('schedule')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeSubTab === 'schedule' ? 'bg-[#0f3460] text-white' : ''}`}>Schedule</button>

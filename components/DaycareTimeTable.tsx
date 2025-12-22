@@ -113,7 +113,7 @@ const DaycareTimeTable: React.FC<Props> = ({ settings, onSettingsChange, activeC
               </div>
               <div className="p-10 bg-gray-50 rounded-[3rem]">
                  <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest">Resource Allocation</h4>
-                 <p className="text-sm font-bold text-gray-600 leading-relaxed italic">OWOP and Language & Literacy are the most resource-intensive areas for this class this week.</p>
+                 <p className="text-sm font-bold text-gray-600 leading-relaxed italic">OWOP and Language &amp; Literacy are the most resource-intensive areas for this class this week.</p>
               </div>
            </div>
         ) : (

@@ -188,7 +188,7 @@ const App: React.FC = () => {
           <div className={`bg-[#cca43b] p-3 rounded-2xl font-black text-[#0f3460] shadow-lg transition-all ${isInitialLoad ? 'animate-pulse scale-110' : ''}`}>UBA</div>
           <div>
             <h1 className="font-black text-2xl tracking-tighter leading-none">{settings.schoolName} S-MAP</h1>
-            <p className="text-[10px] uppercase font-bold text-[#cca43b] tracking-widest mt-1">INTEGRATED SCHOOL MANAGEMENT & ASSESSMENT PLATFORM</p>
+            <p className="text-[10px] uppercase font-bold text-[#cca43b] tracking-widest mt-1">INTEGRATED SCHOOL MANAGEMENT &amp; ASSESSMENT PLATFORM</p>
           </div>
         </div>
 
