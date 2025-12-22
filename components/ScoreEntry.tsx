@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Student, GlobalSettings } from '../types';
+import { DAYCARE_ACTIVITY_GROUPS } from '../constants';
 import EditableField from './EditableField';
 
 interface Props {
@@ -24,7 +25,14 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
   const isEarlyChildhood = department === 'Daycare' || department === 'Nursery' || department === 'KG' || department === 'D&N';
   const isBasic9 = activeClass === 'Basic 9';
 
-  // --- SBA THRESHOLD CONFIGURATION SYNC ---
+  // Mapping core headings to activity groups from constants
+  const groupMapping = useMemo(() => ({
+    "Language & Literacy": ["Language & Literacy"],
+    "Numeracy": ["Numeracy"],
+    "OWOP": ["Physical Development", "Socio-Emotional"],
+    "Creative Activity": ["Creative Arts"]
+  }), []);
+
   const sbaConfig = settings.sbaConfigs?.[activeClass]?.[selectedSubject] || {
     cat1: { marks: 30 },
     cat2: { marks: 40 },
@@ -34,20 +42,45 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
   const thresholds = {
     sectionA: sbaConfig.cat1?.marks || 30,
     sectionC: sbaConfig.cat2?.marks || 40,
-    sectionB: sbaConfig.cat3?.marks || 30,
+    sectionB: isEarlyChildhood ? 100 : (sbaConfig.cat3?.marks || 30),
   };
 
-  /**
-   * Universal calculation for 'total' property based on current mode and entries
-   */
-  const computeTotal = (details: any) => {
+  // Helper to derive Developmental Average as a percentage (0-100)
+  const getDerivedDevAvg = (student: Student, subject: string) => {
+    const activityGroups = groupMapping[subject as keyof typeof groupMapping] || [];
+    let totalScore = 0;
+    let count = 0;
+    const maxIndicatorScore = 3; // Standard Early Childhood scale: 1=D, 2=A, 3=A+
+
+    activityGroups.forEach(group => {
+      const indicators = DAYCARE_ACTIVITY_GROUPS[group as keyof typeof DAYCARE_ACTIVITY_GROUPS] || [];
+      indicators.forEach(ind => {
+        if (settings.activeIndicators.includes(ind)) {
+          const indicatorAvg = student.scoreDetails?.[ind]?.sectionA || 0;
+          if (indicatorAvg > 0) {
+            totalScore += indicatorAvg;
+            count++;
+          }
+        }
+      });
+    });
+
+    if (count === 0) return 0;
+    const rawAvg = totalScore / count;
+    // Scale 1-3 to 0-100: (avg / max) * 100
+    return Math.round((rawAvg / maxIndicatorScore) * 100);
+  };
+
+  const computeTotal = (details: any, derivedAvgPercentage?: number) => {
     if (activeTab === 'mock') {
       return (details.mockObj || 0) + (details.mockTheory || 0);
     }
     if (isEarlyChildhood) {
-      return Math.round(((details.sectionA || 0) + (details.sectionB || 0)) / 2);
+      // For Early Childhood, the 'SBA Total' is the average of two percentages
+      const devAvg = derivedAvgPercentage !== undefined ? derivedAvgPercentage : (details.sectionA || 0);
+      const obsPoints = details.sectionB || 0;
+      return Math.round((devAvg + obsPoints) / 2);
     }
-    // Standard Formula: (CAT 1 + CAT 2 + CAT 3) + Exam Score
     const sbaSum = (details.sectionA || 0) + (details.sectionC || 0) + (details.sectionB || 0);
     return sbaSum + (details.examScore || 0);
   };
@@ -61,13 +94,13 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
         };
         const details = { ...currentDetails };
         
-        // Apply strict thresholds
         if (section === 'sectionA') details.sectionA = Math.max(0, Math.min(Number(val), thresholds.sectionA));
         if (section === 'sectionB') details.sectionB = Math.max(0, Math.min(Number(val), thresholds.sectionB));
         if (section === 'sectionC') details.sectionC = Math.max(0, Math.min(Number(val), thresholds.sectionC));
         if (section === 'facilitatorRemark') details.facilitatorRemark = String(val);
 
-        details.total = computeTotal(details);
+        const derived = isEarlyChildhood ? getDerivedDevAvg(s, selectedSubject) : undefined;
+        details.total = computeTotal(details, derived);
         
         return { ...s, scoreDetails: { ...(s.scoreDetails || {}), [selectedSubject]: details } };
       }
@@ -85,7 +118,6 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
         const details = { ...currentDetails };
         
         if (activeTab === 'exam') {
-          // Section B is the Exam entry
           details.examScore = Math.max(0, val);
           details.total = computeTotal(details);
         } else if (activeTab === 'mock') {
@@ -101,9 +133,46 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
     onUpdate(updated);
   };
 
+  const handleExportSummaryCSV = () => {
+    const headers = ["Learner Full Name"];
+    const activeIndicators: string[] = [];
+
+    Object.entries(groupMapping).forEach(([header, activityGroups]) => {
+      activityGroups.forEach(g => {
+        const indicators = DAYCARE_ACTIVITY_GROUPS[g as keyof typeof DAYCARE_ACTIVITY_GROUPS] || [];
+        indicators.forEach(ind => {
+          if (settings.activeIndicators.includes(ind)) {
+            headers.push(`${header}: ${ind} (Avg)`);
+            activeIndicators.push(ind);
+          }
+        });
+      });
+    });
+
+    const rows = students.map(s => {
+      const row = [`${s.firstName} ${s.surname}`];
+      activeIndicators.forEach(ind => {
+        row.push(s.scoreDetails?.[ind]?.sectionA?.toString() || "0");
+      });
+      return row;
+    });
+
+    const csvContent = [headers, ...rows]
+      .map(e => e.map(val => `"${val}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `UBA_Indicator_Summary_${activeClass.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8 animate-fadeIn no-print">
-      {/* INSTITUTIONAL PARTICULARS HEADER - Fully Editable */}
       <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100 text-center space-y-4">
         <EditableField 
           value={settings.schoolName} 
@@ -161,7 +230,7 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
               {primaryMode === 'sba' ? (
                 <>
                   <button onClick={() => setActiveTab('term')} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase transition ${activeTab === 'term' ? 'bg-[#0f3460] text-white shadow-sm' : 'text-gray-400'}`}>SBA Ledger</button>
-                  <button onClick={() => setActiveTab('daily')} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase transition ${activeTab === 'daily' ? 'bg-[#0f3460] text-white shadow-sm' : 'text-gray-400'}`}>Indicator Entry</button>
+                  <button onClick={() => setActiveTab('daily')} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase transition ${activeTab === 'daily' ? 'bg-[#0f3460] text-white shadow-sm' : 'text-gray-400'}`}>Indicator Summary</button>
                 </>
               ) : (
                 <>
@@ -179,11 +248,21 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
         <div className="mt-8 border-t border-gray-50 pt-8">
           <div className="bg-gray-50 rounded-[2.5rem] border border-gray-200 overflow-hidden">
             {primaryMode === 'sba' && activeTab === 'term' && (
-              <SbaTable students={students} thresholds={thresholds} selectedSubject={selectedSubject} isEarlyChildhood={isEarlyChildhood} handleScoreChange={handleScoreChange} />
+              <SbaTable students={students} thresholds={thresholds} selectedSubject={selectedSubject} isEarlyChildhood={isEarlyChildhood} handleScoreChange={handleScoreChange} getDerivedDevAvg={getDerivedDevAvg} />
             )}
             
             {primaryMode === 'sba' && activeTab === 'daily' && (
-              <DailyIndicatorTable students={students} thresholds={thresholds} selectedSubject={selectedSubject} newDate={newDate} setNewDate={setNewDate} setShowDailyPopout={setShowDailyPopout} />
+              <DailyIndicatorTable 
+                students={students} 
+                settings={settings}
+                activeClass={activeClass}
+                newDate={newDate} 
+                setNewDate={setNewDate} 
+                setShowDailyPopout={setShowDailyPopout}
+                onExport={handleExportSummaryCSV}
+                groupMapping={groupMapping}
+                isEarlyChildhood={isEarlyChildhood}
+              />
             )}
 
             {primaryMode === 'finals' && (
@@ -200,15 +279,15 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
       </div>
 
       {showDailyPopout && (
-        <DailyEntryModal students={students} thresholds={thresholds} selectedSubject={selectedSubject} newDate={newDate} setShowDailyPopout={setShowDailyPopout} onUpdate={onUpdate} />
+        <DailyEntryModal students={students} thresholds={thresholds} selectedSubject={selectedSubject} newDate={newDate} setShowDailyPopout={setShowDailyPopout} onUpdate={onUpdate} isEarlyChildhood={isEarlyChildhood} getDerivedDevAvg={getDerivedDevAvg} computeTotal={computeTotal} />
       )}
     </div>
   );
 };
 
-/* --- REFACTORED SUB-COMPONENTS --- */
+/* --- SUB-COMPONENTS --- */
 
-const SbaTable = ({ students, thresholds, selectedSubject, isEarlyChildhood, handleScoreChange }: any) => (
+const SbaTable = ({ students, thresholds, selectedSubject, isEarlyChildhood, handleScoreChange, getDerivedDevAvg }: any) => (
   <table className="w-full text-left">
     <thead className="bg-[#0f3460] text-white text-[10px] font-black uppercase tracking-widest">
       <tr>
@@ -221,19 +300,20 @@ const SbaTable = ({ students, thresholds, selectedSubject, isEarlyChildhood, han
           </>
         ) : (
           <>
-            <th className="p-6 text-center">Developmental Avg</th>
-            <th className="p-6 text-center">Observation Points</th>
+            <th className="p-6 text-center">Developmental Avg (%)</th>
+            <th className="p-6 text-center">Observation Points (100%)</th>
           </>
         )}
-        <th className="p-6 text-center bg-white/10">SBA Total {!isEarlyChildhood ? '(Sum A+C+B)' : '(Avg)'}</th>
+        <th className="p-6 text-center bg-white/10">SBA Total (%)</th>
         <th className="p-6">Facilitator Remark</th>
       </tr>
     </thead>
     <tbody>
       {students.map((s: any) => {
         const details = s.scoreDetails?.[selectedSubject] || { sectionA: 0, sectionB: 0, sectionC: 0, total: 0, facilitatorRemark: '', examScore: 0 };
-        // Strictly show sum of CATs in this view if not EC
-        const sbaTotal = isEarlyChildhood ? details.total : (details.sectionA || 0) + (details.sectionC || 0) + (details.sectionB || 0);
+        const derivedPercentage = isEarlyChildhood ? getDerivedDevAvg(s, selectedSubject) : 0;
+        const sbaTotal = isEarlyChildhood ? Math.round((derivedPercentage + (details.sectionB || 0)) / 2) : (details.sectionA || 0) + (details.sectionC || 0) + (details.sectionB || 0);
+        
         return (
           <tr key={s.id} className="border-b bg-white border-gray-100 hover:bg-blue-50/20 transition">
             <td className="p-6 font-black text-[#0f3460] uppercase text-xs">{s.firstName} {s.surname}</td>
@@ -245,11 +325,25 @@ const SbaTable = ({ students, thresholds, selectedSubject, isEarlyChildhood, han
               </>
             ) : (
               <>
-                <td className="p-6 text-center"><input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-bold" value={details.sectionA} onChange={e => handleScoreChange(s.id, 'sectionA', e.target.value)} /></td>
-                <td className="p-6 text-center"><input type="number" className="w-16 bg-gray-50 p-2 rounded-xl text-center font-bold" value={details.sectionB} onChange={e => handleScoreChange(s.id, 'sectionB', e.target.value)} /></td>
+                <td className="p-6 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className={`text-lg font-black px-4 py-1 rounded-xl shadow-inner ${derivedPercentage >= 60 ? 'bg-green-100 text-green-700' : derivedPercentage > 0 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-400'}`}>
+                      {derivedPercentage > 0 ? `${derivedPercentage}%` : '--'}
+                    </span>
+                    <span className="text-[7px] text-gray-400 font-black uppercase mt-1">Weighted Indicator Avg</span>
+                  </div>
+                </td>
+                <td className="p-6 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <input type="number" max={100} className="w-16 bg-gray-50 p-2 rounded-xl text-center font-bold" value={details.sectionB} onChange={e => handleScoreChange(s.id, 'sectionB', e.target.value)} />
+                    <span className="text-xs font-black text-gray-400">%</span>
+                  </div>
+                </td>
               </>
             )}
-            <td className="p-6 text-center font-black text-xl text-[#2e8b57] bg-blue-50/30">{sbaTotal}</td>
+            <td className="p-6 text-center font-black text-xl text-[#2e8b57] bg-blue-50/30">
+               {sbaTotal}{isEarlyChildhood ? '%' : ''}
+            </td>
             <td className="p-6">
               <input className="w-full bg-transparent border-b border-gray-200 text-[10px] italic outline-none focus:border-[#cca43b]" value={details.facilitatorRemark} onChange={e => handleScoreChange(s.id, 'facilitatorRemark', e.target.value)} placeholder="..." />
             </td>
@@ -260,30 +354,111 @@ const SbaTable = ({ students, thresholds, selectedSubject, isEarlyChildhood, han
   </table>
 );
 
-const DailyIndicatorTable = ({ students, thresholds, selectedSubject, newDate, setNewDate, setShowDailyPopout }: any) => (
-  <div className="p-10 space-y-6 bg-white">
-    <div className="flex justify-between items-center border-b pb-4">
-      <h4 className="font-black text-[#0f3460] uppercase text-sm">Indicator Entry Desk</h4>
-      <div className="flex gap-4 items-center">
-        <input type="date" className="p-3 rounded-xl bg-gray-100 border-none font-bold text-xs" value={newDate} onChange={e => setNewDate(e.target.value)} />
-        <button onClick={() => setShowDailyPopout(true)} className="bg-[#cca43b] text-[#0f3460] px-8 py-3 rounded-xl font-black uppercase text-[10px] shadow-lg">+ Log Entry</button>
+const DailyIndicatorTable = ({ students, settings, activeClass, newDate, setNewDate, setShowDailyPopout, onExport, groupMapping, isEarlyChildhood }: any) => {
+  // Compute active structure based on mapping
+  const tableStructure = useMemo(() => {
+    return Object.entries(groupMapping).map(([header, activityGroups]) => {
+      const indicators: string[] = [];
+      (activityGroups as string[]).forEach(g => {
+        const groupItems = DAYCARE_ACTIVITY_GROUPS[g as keyof typeof DAYCARE_ACTIVITY_GROUPS] || [];
+        groupItems.forEach(item => {
+          if (settings.activeIndicators.includes(item)) indicators.push(item);
+        });
+      });
+      return { header, indicators };
+    }).filter(group => group.indicators.length > 0);
+  }, [groupMapping, settings.activeIndicators]);
+
+  const flatIndicators = tableStructure.flatMap(g => g.indicators);
+
+  return (
+    <div className="p-10 space-y-6 bg-white overflow-x-auto">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-6 gap-4">
+        <div>
+          <h4 className="font-black text-[#0f3460] uppercase text-lg tracking-tighter">Summarised Active Indicators</h4>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Master Matrix • {activeClass}</p>
+        </div>
+        <div className="flex gap-4 items-center flex-wrap">
+          {!isEarlyChildhood && <input type="date" className="p-3 rounded-xl bg-gray-100 border-none font-bold text-xs" value={newDate} onChange={e => setNewDate(e.target.value)} />}
+          <button onClick={onExport} className="bg-[#0f3460] text-white px-6 py-3 rounded-xl font-black uppercase text-[10px] shadow-lg hover:scale-105 transition">Export Summary CSV</button>
+          <button onClick={() => setShowDailyPopout(true)} className="bg-[#cca43b] text-[#0f3460] px-8 py-3 rounded-xl font-black uppercase text-[10px] shadow-lg hover:scale-105 transition">
+             {isEarlyChildhood ? '+ Log Observation Points' : '+ Add Session Entry'}
+          </button>
+        </div>
+      </div>
+      <table className="w-full text-left border-collapse min-w-max border border-gray-100">
+        <thead className="bg-[#f4f6f7] text-gray-500 text-[8px] font-black uppercase tracking-wider">
+          {/* Header Row 1: Groups */}
+          <tr>
+            <th className="p-4 sticky left-0 bg-[#f4f6f7] z-10 border-r border-b border-gray-200 shadow-sm" rowSpan={2}>Learner Name</th>
+            {tableStructure.map(group => (
+              <th key={group.header} className="p-2 text-center border-r border-b border-gray-200 bg-[#0f3460] text-white" colSpan={group.indicators.length}>
+                {group.header}
+              </th>
+            ))}
+          </tr>
+          {/* Header Row 2: Indicators (VERTICAL) */}
+          <tr>
+            {tableStructure.map(group => (
+              group.indicators.map((ind, idx) => (
+                <th key={ind} className="p-2 text-center border-r border-gray-200 bg-gray-50 align-bottom h-48 min-w-[50px]">
+                  <div className="flex flex-col items-center justify-end h-full pb-2">
+                    <span className="[writing-mode:vertical-rl] rotate-180 text-[#0f3460] font-black text-[9px] uppercase whitespace-nowrap">
+                      {ind}
+                    </span>
+                    <span className="text-[6px] text-gray-400 mt-2 uppercase font-bold tracking-tighter">Avg Log</span>
+                  </div>
+                </th>
+              ))
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {students.map((s: any) => (
+            <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50 transition">
+              <td className="p-4 font-black text-[#0f3460] uppercase text-[11px] sticky left-0 bg-white z-10 border-r border-gray-100 shadow-sm">
+                {s.firstName} {s.surname}
+              </td>
+              {flatIndicators.map(ind => {
+                const avg = s.scoreDetails?.[ind]?.sectionA || 0;
+                const entriesCount = Object.keys(s.scoreDetails?.[ind]?.dailyScores || {}).length;
+                return (
+                  <td key={ind} className="p-4 text-center border-r border-gray-50">
+                    <div className="flex flex-col items-center">
+                      <span className={`text-lg font-black px-3 py-1 rounded-xl shadow-inner ${avg >= 2 ? 'text-[#2e8b57] bg-green-50' : avg > 0 ? 'text-orange-500 bg-orange-50' : 'text-gray-300 bg-gray-50'}`}>
+                        {avg > 0 ? avg : '--'}
+                      </span>
+                      {entriesCount > 0 && <span className="text-[6px] font-black text-gray-400 uppercase mt-1">Logs: {entriesCount}</span>}
+                    </div>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="p-6 bg-blue-50 rounded-[2.5rem] border border-blue-100">
+         <div className="flex gap-10">
+            <div className="flex-1">
+               <h5 className="text-[10px] font-black text-blue-900 uppercase mb-2">Institutional Mapping Logic</h5>
+               <p className="text-[9px] text-blue-800 leading-relaxed italic">
+                Indicators are dynamically mapped to curriculum pillars. <strong>OWOP</strong> specifically integrates <strong>Physical Development</strong> and <strong>Socio-Emotional</strong> metrics to provide a holistic view of the child's environment and personal growth.
+               </p>
+            </div>
+            <div className="w-64 space-y-1">
+               <h5 className="text-[9px] font-black text-blue-900 uppercase mb-1">Scale Thresholds</h5>
+               <div className="flex items-center gap-2 text-[8px] font-bold text-blue-700">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span> 2.0+ : Achieved / Advanced
+               </div>
+               <div className="flex items-center gap-2 text-[8px] font-bold text-blue-700">
+                  <span className="w-2 h-2 rounded-full bg-orange-500"></span> 1.0 - 1.9 : Developing / Emerging
+               </div>
+            </div>
+         </div>
       </div>
     </div>
-    <table className="w-full text-left">
-      <thead className="bg-gray-50 text-gray-400 text-[9px] font-black uppercase">
-        <tr><th className="p-4">Learner Name</th><th className="p-4 text-center">Current Average (Capped at {thresholds.sectionA})</th></tr>
-      </thead>
-      <tbody>
-        {students.map((s: any) => (
-          <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50 transition">
-            <td className="p-4 font-black text-[#0f3460] uppercase text-[11px]">{s.firstName} {s.surname}</td>
-            <td className="p-4 text-center font-black text-lg text-[#cca43b]">{s.scoreDetails?.[selectedSubject]?.sectionA || 0}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
+  );
+};
 
 const FinalsScoreTable = ({ students, activeTab, selectedSubject, handleFinalScoreChange, handleRemarkChange }: any) => (
   <table className="w-full text-left bg-white">
@@ -299,18 +474,14 @@ const FinalsScoreTable = ({ students, activeTab, selectedSubject, handleFinalSco
     <tbody>
       {students.map((s: any) => {
         const details = s.scoreDetails?.[selectedSubject] || { sectionA: 0, sectionB: 0, sectionC: 0, total: 0, facilitatorRemark: '', examScore: 0, mockObj: 0, mockTheory: 0 };
-        // SEC A Mapping for Exams = Sum of CATs
         const sbaSum = (details.sectionA || 0) + (details.sectionC || 0) + (details.sectionB || 0);
-        
         return (
           <tr key={s.id} className="border-b border-gray-100 hover:bg-yellow-50/20 transition">
             <td className="p-6 font-black text-[#0f3460] uppercase text-xs">{s.firstName} {s.surname}</td>
             <td className="p-6 text-center">
               {activeTab === 'exam' ? (
                 <div className="flex flex-col items-center">
-                  <span className="inline-block px-4 py-2 bg-blue-50 text-[#0f3460] rounded-xl font-black text-sm border border-blue-100 shadow-inner">
-                    {sbaSum}
-                  </span>
+                  <span className="inline-block px-4 py-2 bg-blue-50 text-[#0f3460] rounded-xl font-black text-sm border border-blue-100 shadow-inner">{sbaSum}</span>
                   <span className="text-[8px] text-gray-400 font-bold uppercase mt-1">Mapped Sum</span>
                 </div>
               ) : (
@@ -326,7 +497,7 @@ const FinalsScoreTable = ({ students, activeTab, selectedSubject, handleFinalSco
             </td>
             <td className="p-6 text-center font-black text-2xl text-[#0f3460] bg-gray-50/50">{details.total}</td>
             <td className="p-6">
-              <input className="w-full bg-transparent border-b border-gray-100 text-[10px] italic outline-none focus:border-[#cca43b]" value={details.facilitatorRemark} onChange={e => handleRemarkChange(s.id, e.target.value)} placeholder="Entry notes..." />
+              <input className="w-full bg-transparent border-b border-gray-200 text-[10px] italic outline-none focus:border-[#cca43b]" value={details.facilitatorRemark} onChange={e => handleRemarkChange(s.id, e.target.value)} placeholder="Entry notes..." />
             </td>
           </tr>
         );
@@ -335,14 +506,24 @@ const FinalsScoreTable = ({ students, activeTab, selectedSubject, handleFinalSco
   </table>
 );
 
-const DailyEntryModal = ({ students, thresholds, selectedSubject, newDate, setShowDailyPopout, onUpdate }: any) => {
+const DailyEntryModal = ({ students, thresholds, selectedSubject, newDate, setShowDailyPopout, onUpdate, isEarlyChildhood, getDerivedDevAvg, computeTotal }: any) => {
   const updateLocalScore = (id: string, score: number) => {
     const updated = students.map((s: any) => {
       if (s.id === id) {
-        const details = { ... (s.scoreDetails?.[selectedSubject] || { dailyScores: {} }) };
-        details.dailyScores = { ...(details.dailyScores || {}), [newDate]: Math.min(score, thresholds.sectionA) };
-        const scores = Object.values(details.dailyScores) as number[];
-        details.sectionA = Math.round(scores.reduce((a, b) => a + b, 0) / (scores.length || 1));
+        const details = { ... (s.scoreDetails?.[selectedSubject] || { sectionA: 0, sectionB: 0, sectionC: 0, total: 0, facilitatorRemark: '', dailyScores: {} }) };
+        
+        if (isEarlyChildhood) {
+          // Redirect: Submit to Observation Points (sectionB) as a percentage percentage (0-100)
+          details.sectionB = Math.max(0, Math.min(score, 100));
+          const derivedPercentage = getDerivedDevAvg(s, selectedSubject);
+          details.total = computeTotal(details, derivedPercentage);
+        } else {
+          // Standard session log entry
+          details.dailyScores = { ...(details.dailyScores || {}), [newDate]: Math.min(score, thresholds.sectionA) };
+          const scores = Object.values(details.dailyScores) as number[];
+          details.sectionA = Math.round(scores.reduce((a, b) => a + b, 0) / (scores.length || 1));
+        }
+        
         return { ...s, scoreDetails: { ...(s.scoreDetails || {}), [selectedSubject]: details } };
       }
       return s;
@@ -354,20 +535,41 @@ const DailyEntryModal = ({ students, thresholds, selectedSubject, newDate, setSh
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#0f3460]/80 backdrop-blur-md p-10 animate-fadeIn">
       <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="bg-[#cca43b] p-8 text-[#0f3460] flex justify-between items-center">
-          <h3 className="text-2xl font-black uppercase tracking-tighter">Indicator Ledger Ledger</h3>
+          <h3 className="text-2xl font-black uppercase tracking-tighter">
+            {isEarlyChildhood ? 'Observation Points Entry (%)' : 'Indicator Session Entry'}
+          </h3>
           <button onClick={() => setShowDailyPopout(false)} className="text-xl">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto p-10">
+          <div className="mb-6 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+             <p className="text-[10px] font-black uppercase text-[#0f3460]">Active Pillar: <span className="text-[#cca43b]">{selectedSubject}</span></p>
+             {isEarlyChildhood ? (
+               <p className="text-[10px] font-black uppercase text-gray-400">Target Field: <span className="text-[#2e8b57]">Observation Points (Manual Entry as %)</span></p>
+             ) : (
+               <p className="text-[10px] font-black uppercase text-gray-400">Date: {newDate}</p>
+             )}
+          </div>
           <table className="w-full text-left">
             <thead className="bg-gray-50 text-[10px] font-black uppercase border-b">
-              <tr><th className="p-4">Learner</th><th className="p-4 text-center">Score (Max: {thresholds.sectionA})</th></tr>
+              <tr>
+                <th className="p-4">Learner</th>
+                <th className="p-4 text-center">Score (Max: {isEarlyChildhood ? '100%' : thresholds.sectionA})</th>
+              </tr>
             </thead>
             <tbody>
               {students.map((s: any) => (
                 <tr key={s.id} className="border-b hover:bg-yellow-50/30">
                   <td className="p-4 font-black uppercase text-xs">{s.firstName} {s.surname}</td>
                   <td className="p-4 text-center">
-                    <input type="number" className="w-24 bg-gray-50 p-3 rounded-xl text-center font-black outline-none" value={s.scoreDetails?.[selectedSubject]?.dailyScores?.[newDate] || 0} onChange={e => updateLocalScore(s.id, Number(e.target.value))} />
+                    <div className="flex items-center justify-center gap-2">
+                       <input 
+                        type="number" 
+                        className="w-24 bg-gray-50 p-3 rounded-xl text-center font-black outline-none border border-transparent focus:border-[#cca43b]" 
+                        value={isEarlyChildhood ? (s.scoreDetails?.[selectedSubject]?.sectionB || 0) : (s.scoreDetails?.[selectedSubject]?.dailyScores?.[newDate] || 0)} 
+                        onChange={e => updateLocalScore(s.id, Number(e.target.value))} 
+                      />
+                      {isEarlyChildhood && <span className="font-black text-[#0f3460]">%</span>}
+                    </div>
                   </td>
                 </tr>
               ))}

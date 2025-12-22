@@ -9,7 +9,6 @@ interface Props {
   settings: GlobalSettings;
   onSettingsChange: (s: GlobalSettings) => void;
   onStudentUpdate: (id: string, field: string, value: any) => void;
-  // Added activeClass to props
   activeClass: string;
 }
 
@@ -27,10 +26,22 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
           onSave={v => onSettingsChange({...settings, schoolName: v})} 
           className="text-4xl font-black text-[#0f3460] uppercase tracking-tighter mb-1" 
         />
-        <div className="flex justify-center gap-4 text-sm font-bold text-gray-600 mb-4">
-          <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
-          <span>|</span>
-          <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
+        <EditableField 
+          value={settings.motto} 
+          onSave={v => onSettingsChange({...settings, motto: v})} 
+          className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b] mb-2" 
+        />
+        <div className="space-y-1 mb-4">
+          <EditableField 
+            value={settings.address} 
+            onSave={v => onSettingsChange({...settings, address: v})} 
+            className="text-xs font-bold text-gray-600 w-full text-center uppercase"
+          />
+          <div className="flex justify-center gap-4 text-xs font-bold text-gray-400 italic">
+            <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
+            <span>|</span>
+            <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
+          </div>
         </div>
         <div className="bg-[#0f3460] text-white py-2 px-8 inline-block font-black text-sm rounded-lg uppercase tracking-widest">
           STANDARD BASED CURRICULUM: LEARNER’S PERFORMANCE REPORT

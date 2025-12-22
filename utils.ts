@@ -14,6 +14,39 @@ export const NRT_SCALE: GradingScale[] = [
   { grade: "F9", value: 9, zScore: -999, remark: "Fail", color: "#e74c3c" },
 ];
 
+/**
+ * Dynamic Multi-Point Rating System
+ * Returns a score-based rating using population statistics (NRT approach)
+ */
+export function getDevelopmentalRating(score: number, mean: number, stdDev: number, points: 2 | 3 | 5 | 9) {
+  if (stdDev <= 0) return { label: "N/A", color: "#94a3b8", value: 0 };
+  const z = (score - mean) / stdDev;
+
+  if (points === 2) {
+    return z >= 0 
+      ? { label: "Achieved", color: "#2e8b57", value: 2 }
+      : { label: "Emerging", color: "#e67e22", value: 1 };
+  }
+  
+  if (points === 3) {
+    if (z > 1.0) return { label: "Advanced", color: "#2e8b57", value: 3 };
+    if (z >= -1.0) return { label: "Achieving", color: "#cca43b", value: 2 };
+    return { label: "Developing", color: "#e74c3c", value: 1 };
+  }
+
+  if (points === 5) {
+    if (z > 1.5) return { label: "Exceptional", color: "#2e8b57", value: 5 };
+    if (z > 0.5) return { label: "Strong", color: "#3a9d6a", value: 4 };
+    if (z >= -0.5) return { label: "Average", color: "#0f3460", value: 3 };
+    if (z >= -1.5) return { label: "Low Average", color: "#cca43b", value: 2 };
+    return { label: "At Risk", color: "#e74c3c", value: 1 };
+  }
+
+  // 9-point scale (matches NRT_SCALE logic)
+  const gradeObj = NRT_SCALE.find(s => z >= s.zScore) || NRT_SCALE[8];
+  return { label: gradeObj.grade, color: gradeObj.color, value: gradeObj.value };
+}
+
 export function generateSubjectRemark(score: number): string {
   if (score >= 80) return "Exceptional grasp of concepts. Keep it up!";
   if (score >= 70) return "Strong performance. Consistent effort observed.";
