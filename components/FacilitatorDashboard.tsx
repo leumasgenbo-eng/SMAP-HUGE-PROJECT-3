@@ -15,23 +15,36 @@ const FacilitatorDashboard: React.FC<Props> = ({ students, settings, onSettingsC
   const stats = subjectList.map(subj => calculateFacilitatorStats(students, settings, subj));
 
   const handleSharePDF = () => {
-    // Logic similar to ReportCard for sharing analysis as PDF
-    alert("Generating Performance Analysis PDF...");
+    window.print();
   };
 
   return (
     <div className="space-y-8 animate-fadeIn">
+      {/* Institutional Particulars Header */}
+      <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-4 mb-4 no-print">
+        <EditableField 
+          value={settings.schoolName} 
+          onSave={v => onSettingsChange({...settings, schoolName: v})} 
+          className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter" 
+        />
+        <EditableField 
+          value={settings.motto} 
+          onSave={v => onSettingsChange({...settings, motto: v})} 
+          className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" 
+        />
+        <div className="flex justify-center gap-6 text-[11px] font-black text-gray-400 uppercase tracking-widest pt-2">
+          <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
+          <span>•</span>
+          <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
+          <span>•</span>
+          <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
+        </div>
+      </div>
+
       <div className="bg-[#0f3460] p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <EditableField 
-                value={settings.schoolName} 
-                onSave={(val) => onSettingsChange({...settings, schoolName: val})}
-                className="text-4xl font-black uppercase tracking-tighter"
-              />
-            </div>
-            <h2 className="text-xl font-bold text-[#cca43b] uppercase tracking-widest italic flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-[#cca43b] uppercase tracking-widest italic flex items-center gap-3">
                Facilitator Performance Analysis
                <EditableField 
                 value={`TERM ${settings.currentTerm}`} 
@@ -39,6 +52,7 @@ const FacilitatorDashboard: React.FC<Props> = ({ students, settings, onSettingsC
                 className="bg-white/10 px-4 py-1 rounded-full text-[10px] font-black not-italic"
               />
             </h2>
+            <p className="text-[10px] font-bold text-white/50 uppercase mt-2">Institutional Quality Audit Ledger</p>
           </div>
           <button 
             onClick={handleSharePDF}

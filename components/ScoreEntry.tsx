@@ -128,7 +128,26 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
 
   return (
     <div className="space-y-8 animate-fadeIn no-print relative">
-      {/* Redundant Institutional Particulars Header Removed from here to fix duplication */}
+      {/* Editable Institutional Header */}
+      <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-4 mb-4">
+        <EditableField 
+          value={settings.schoolName} 
+          onSave={v => onSettingsChange({...settings, schoolName: v})} 
+          className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter" 
+        />
+        <EditableField 
+          value={settings.motto} 
+          onSave={v => onSettingsChange({...settings, motto: v})} 
+          className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" 
+        />
+        <div className="flex justify-center gap-6 text-[11px] font-black text-gray-400 uppercase tracking-widest pt-2">
+          <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
+          <span>•</span>
+          <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
+          <span>•</span>
+          <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
+        </div>
+      </div>
 
       <div className="bg-white p-8 rounded-[3rem] shadow-2xl border border-gray-100">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
@@ -370,9 +389,9 @@ const FinalsScoreTable = ({ students, activeTab, selectedSubject, handleFinalSco
                   <button 
                     onClick={() => setActiveRemarkId(activeRemarkId === s.id ? null : s.id)}
                     className="p-1 rounded bg-gray-100 text-gray-400 hover:text-[#0f3460] transition shadow-sm"
-                  >
+                 >
                     📋
-                  </button>
+                 </button>
                </div>
                {activeRemarkId === s.id && (
                  <div className="absolute right-6 top-12 z-[100] w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 max-h-48 overflow-y-auto animate-fadeIn">
