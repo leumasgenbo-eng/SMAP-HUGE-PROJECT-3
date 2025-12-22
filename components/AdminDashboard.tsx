@@ -219,6 +219,14 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
                       <input className="w-full bg-white p-3 rounded-xl border-2 border-gray-100 font-black text-[#0f3460]" value={settings.schoolName} onChange={e => onSettingsChange({...settings, schoolName: e.target.value})} />
                    </div>
                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-gray-400 uppercase">Official Motto</label>
+                      <input className="w-full bg-white p-3 rounded-xl border-2 border-gray-100 font-black text-[#0f3460]" value={settings.motto} onChange={e => onSettingsChange({...settings, motto: e.target.value})} />
+                   </div>
+                   <div className="space-y-1">
+                      <label className="text-[9px] font-black text-gray-400 uppercase">Official Address</label>
+                      <input className="w-full bg-white p-3 rounded-xl border-2 border-gray-100 font-black text-[#0f3460]" value={settings.address} onChange={e => onSettingsChange({...settings, address: e.target.value})} />
+                   </div>
+                   <div className="space-y-1">
                       <label className="text-[9px] font-black text-gray-400 uppercase">Official Email</label>
                       <input className="w-full bg-white p-3 rounded-xl border-2 border-gray-100 font-black text-[#0f3460]" value={settings.email} onChange={e => onSettingsChange({...settings, email: e.target.value})} />
                    </div>

@@ -34,6 +34,8 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
         <EditableField value={settings.schoolName} onSave={v => onSettingsChange({...settings, schoolName: v})} className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-2" />
         
         <div className="flex justify-center gap-4 text-sm font-bold text-gray-500 mb-4">
+          <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} className="uppercase" />
+          <span>|</span>
           <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
           <span>|</span>
           <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />

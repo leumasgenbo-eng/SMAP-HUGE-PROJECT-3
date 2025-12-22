@@ -101,8 +101,18 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
               className="text-4xl font-black w-full text-center uppercase tracking-widest text-[#0f3460] drop-shadow-sm leading-tight"
               multiline
             />
+            <EditableField 
+              value={settings.motto} 
+              onSave={(val) => onSettingsChange({...settings, motto: val})}
+              className="text-[10px] font-black w-full text-center uppercase tracking-[0.3em] text-[#cca43b] mt-1"
+            />
           </div>
-          <div className="mt-4">
+          <div className="mt-4 space-y-1">
+            <EditableField 
+              value={settings.address} 
+              onSave={(val) => onSettingsChange({...settings, address: val})}
+              className="text-xs font-bold text-gray-600 w-full text-center uppercase"
+            />
             <EditableField 
               value={`Tel: ${settings.telephone} | Email: ${settings.email}`}
               onSave={(val) => {
@@ -113,7 +123,7 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
                   email: parts[1]?.replace('Email:', '').trim() || settings.email
                 });
               }}
-              className="text-xs font-bold text-gray-600 w-full text-center italic"
+              className="text-xs font-bold text-gray-400 w-full text-center italic"
             />
           </div>
         </div>

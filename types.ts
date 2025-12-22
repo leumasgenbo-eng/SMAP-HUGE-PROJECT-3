@@ -171,6 +171,8 @@ export interface SBAConfig {
 
 export interface GlobalSettings {
   schoolName: string;
+  address: string;
+  motto: string;
   email: string;
   telephone: string;
   logo: string;

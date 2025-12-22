@@ -42,6 +42,8 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('uba_settings');
     const defaultSettings: GlobalSettings = {
       schoolName: 'UNITED BAYLOR ACADEMY',
+      address: 'P.O. BOX 1234, ACCRA-GHANA',
+      motto: 'KNOWLEDGE AND EXCELLENCE',
       email: 'info@unitedbaylor.edu.gh',
       telephone: '+233 24 000 0000',
       logo: '',
