@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useRef } from 'react';
-import { FILING_CABINET_STRUCTURE, DEPARTMENTS } from '../constants';
+import { FILING_CABINET_STRUCTURE, DEPARTMENTS, getSubjectsForDepartment } from '../constants';
 import { FilingRecord, GlobalSettings, Student } from '../types';
 
 interface Props {
@@ -31,13 +31,45 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
     notify(`${mod} visibility updated.`, 'info');
   };
 
+  const executePromotion = () => {
+    if (!confirm("Mass execute promotion logic for the current academic cycle? This will update learner statuses based on standard criteria.")) return;
+
+    const updatedStudents = students.map(s => {
+      if (s.status !== 'Admitted') return s;
+
+      const subjectList = getSubjectsForDepartment(s.currentClass.includes('Basic 7') || s.currentClass.includes('Basic 8') || s.currentClass.includes('Basic 9') ? 'JHS' : 'Lower');
+      const allPassed = subjectList.every(subj => (s.scoreDetails?.[subj]?.total || 0) >= 50);
+      
+      const termAttendance = s.attendance?.[settings.currentTerm] || {};
+      const presentCount = Object.values(termAttendance).filter(status => status === 'P').length;
+      const attendanceRate = (presentCount / (settings.totalAttendance || 1)) * 100;
+
+      let status = "PROMOTED";
+      
+      if (!s.isFeesCleared) {
+        status = "Promotion Pending (Clear school fees)";
+      } else if (attendanceRate < 90) {
+        status = "Promotion Pending (Parent invited on reopening day)";
+      } else if (attendanceRate < 95) {
+        status = "Promotion Conditional (Attendance below 95%)";
+      } else if (!allPassed) {
+        status = "On Probation (Prepare to write probational exams)";
+      }
+
+      return { ...s, promotionStatus: status };
+    });
+
+    onStudentsUpdate(updatedStudents);
+    notify("Promotion logic executed across all departments.", "success");
+  };
+
   const handleExportCSV = () => {
     if (students.length === 0) {
       notify("No student records found to export.", "error");
       return;
     }
 
-    const headers = ["ID", "SerialID", "FirstName", "Surname", "OtherNames", "DOB", "Sex", "Class", "Status", "FatherName", "MotherName"];
+    const headers = ["ID", "SerialID", "FirstName", "Surname", "OtherNames", "DOB", "Sex", "Class", "Status", "FeesCleared", "PromotionStatus", "FatherName", "MotherName"];
     const rows = students.map(s => [
       s.id,
       s.serialId,
@@ -48,6 +80,8 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
       s.sex,
       s.currentClass,
       s.status,
+      s.isFeesCleared ? "Yes" : "No",
+      s.promotionStatus || "",
       s.father?.name || "",
       s.mother?.name || ""
     ]);
@@ -90,9 +124,11 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
           sex: (parts[6] as any) || "Male",
           currentClass: parts[7] || "Creche",
           status: (parts[8] as any) || "Admitted",
+          isFeesCleared: parts[9] === "Yes",
+          promotionStatus: parts[10] || "",
           createdAt: new Date().toISOString(),
-          father: { name: parts[9] || "", contact: "", occupation: "", education: "", religion: "", isDead: false },
-          mother: { name: parts[10] || "", contact: "", occupation: "", education: "", religion: "", isDead: false },
+          father: { name: parts[11] || "", contact: "", occupation: "", education: "", religion: "", isDead: false },
+          mother: { name: parts[12] || "", contact: "", occupation: "", education: "", religion: "", isDead: false },
           livesWith: 'Both Parents',
           hasSpecialNeeds: false,
           scoreDetails: {},
@@ -135,6 +171,35 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
         </div>
 
         <div className="flex-1 overflow-y-auto bg-gray-50/30 p-10 min-h-[500px]">
+          {activeTab === 'promotion' && (
+            <div className="max-w-4xl mx-auto space-y-10">
+               <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-xl">
+                  <h3 className="text-2xl font-black text-[#0f3460] mb-4 uppercase">Automated Promotion Engine</h3>
+                  <p className="text-sm text-gray-500 mb-8 italic">Criteria: (Pass All Subjects) & (Attend >= 95%) & (Fees Cleared)</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                     <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100">
+                        <h4 className="text-[10px] font-black uppercase text-blue-900 mb-2">Promotable Pool</h4>
+                        <p className="text-4xl font-black text-blue-600">{students.filter(s => s.status === 'Admitted' && s.isFeesCleared).length}</p>
+                        <p className="text-[9px] font-bold text-blue-400 uppercase mt-1">Learners with cleared fees</p>
+                     </div>
+                     <div className="p-6 bg-red-50 rounded-2xl border border-red-100">
+                        <h4 className="text-[10px] font-black uppercase text-red-900 mb-2">Withheld Pool</h4>
+                        <p className="text-4xl font-black text-red-600">{students.filter(s => s.status === 'Admitted' && !s.isFeesCleared).length}</p>
+                        <p className="text-[9px] font-bold text-red-400 uppercase mt-1">Learners requiring fee clearance</p>
+                     </div>
+                  </div>
+
+                  <button 
+                    onClick={executePromotion}
+                    className="w-full bg-[#0f3460] text-white py-6 rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:scale-[1.02] transition-all"
+                  >
+                    Execute Cycle Promotion Logic
+                  </button>
+               </div>
+            </div>
+          )}
+
           {activeTab === 'system' && (
             <div className="max-w-4xl mx-auto space-y-10">
               <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-xl">
@@ -227,11 +292,11 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
                       <input className="w-full bg-white p-3 rounded-xl border-2 border-gray-100 font-black text-[#0f3460]" value={settings.address} onChange={e => onSettingsChange({...settings, address: e.target.value})} />
                    </div>
                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-gray-400 uppercase">Official Email</label>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block px-1">Official Email</label>
                       <input className="w-full bg-white p-3 rounded-xl border-2 border-gray-100 font-black text-[#0f3460]" value={settings.email} onChange={e => onSettingsChange({...settings, email: e.target.value})} />
                    </div>
                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-gray-400 uppercase">Contact Telephone</label>
+                      <label className="text-[9px] font-black uppercase text-gray-400 block px-1">Contact Telephone</label>
                       <input className="w-full bg-white p-3 rounded-xl border-2 border-gray-100 font-black text-[#0f3460]" value={settings.telephone} onChange={e => onSettingsChange({...settings, telephone: e.target.value})} />
                    </div>
                    <button onClick={() => notify("Branding Updated!", "success")} className="w-full bg-[#0f3460] text-white py-4 rounded-2xl font-black uppercase text-xs shadow-lg">Save Identity</button>

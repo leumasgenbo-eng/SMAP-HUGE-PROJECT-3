@@ -157,7 +157,9 @@ export function processStudentData(students: Student[], settings: GlobalSettings
       overallRemark: s.finalRemark || `Performance is ${cat.toLowerCase()}.`,
       recommendation: s.recommendation || "Continue with intensive review.",
       attendance: presentCount.toString(),
-      classSize: students.length
+      classSize: students.length,
+      isFeesCleared: !!s.isFeesCleared,
+      promotionStatus: s.promotionStatus
     };
   });
 

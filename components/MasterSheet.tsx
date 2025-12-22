@@ -23,8 +23,8 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
   const isJHS = department === 'JHS';
   
   const displayExamTitle = (isJHS || settings.mockSeries) 
-    ? "MOCK EXAMINATION SHEET" 
-    : "EXAMINATION MASTER BROAD SHEET";
+    ? (settings.reportTitle || "MOCK EXAMINATION SHEET") 
+    : (settings.reportTitle || "EXAMINATION MASTER BROAD SHEET");
 
   return (
     <div className="bg-white p-4 md:p-12 shadow-2xl border border-gray-100 min-w-max animate-fadeIn">
@@ -33,6 +33,11 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
           value={settings.schoolName} 
           onSave={v => onSettingsChange({...settings, schoolName: v})} 
           className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-2" 
+        />
+        <EditableField 
+          value={settings.motto} 
+          onSave={v => onSettingsChange({...settings, motto: v})} 
+          className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b] mb-4" 
         />
         
         <div className="flex justify-center gap-4 text-sm font-bold text-gray-500 mb-4">
@@ -56,11 +61,15 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
           />
         </div>
 
-        <p className="text-xl font-black text-[#0f3460] uppercase mb-1">{displayExamTitle}</p>
+        <EditableField 
+          value={displayExamTitle} 
+          onSave={v => onSettingsChange({...settings, reportTitle: v})}
+          className="text-xl font-black text-[#0f3460] uppercase mb-1"
+        />
         <p className="text-lg font-black text-[#cca43b] uppercase mb-4 tracking-widest">CLASS: {activeClass}</p>
 
         <div className="flex justify-center gap-10 text-[10px] font-black uppercase tracking-widest text-gray-400">
-          <span>Academic Year: {settings.academicYear}</span>
+          <span>Academic Year: <EditableField value={settings.academicYear} onSave={v => onSettingsChange({...settings, academicYear: v})} className="inline-block" /></span>
           <span>{isJHS ? `Mock Series: ${settings.mockSeries}` : `Term: ${settings.currentTerm}`}</span>
           <span>Generated: {new Date().toLocaleDateString()}</span>
         </div>
