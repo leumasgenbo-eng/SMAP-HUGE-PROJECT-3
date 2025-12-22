@@ -54,9 +54,6 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
     }
   };
 
-  const isWithheld = !pupil.isFeesCleared;
-  const promotionLabel = pupil.promotionStatus || (parseInt(pupil.attendance) >= 95 ? 'PROMOTED' : 'CONDITIONALLY PROMOTED');
-
   return (
     <div className="flex justify-center p-4">
       <div 
@@ -107,10 +104,7 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
             </div>
           </div>
           <div className="bg-[#0f3460] text-white py-2 px-8 inline-block font-black text-sm rounded-lg uppercase tracking-widest">
-            <EditableField 
-              value={settings.reportTitle || "EARLY CHILDHOOD PERFORMANCE REPORT"} 
-              onSave={v => onSettingsChange({...settings, reportTitle: v})} 
-            />
+            EARLY CHILDHOOD PERFORMANCE REPORT
           </div>
         </div>
 
@@ -128,98 +122,44 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
           <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase w-24">Class:</span><span className="flex-1 border-b border-black text-center">{activeClass}</span></div>
           <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase w-24">No. on Roll:</span><span className="flex-1 border-b border-black text-center">{pupil.classSize || '--'}</span></div>
           <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase w-24">Attendance:</span><span className="flex-1 border-b border-black text-center">{pupil.attendance} / {settings.totalAttendance}</span></div>
-          <div className="flex gap-2 items-baseline font-black">
-            <span className="text-[#cca43b] uppercase w-24">Reopening:</span>
-            <span className="flex-1 border-b border-black text-center">
-              <EditableField value={settings.reopeningDate} onSave={v => onSettingsChange({...settings, reopeningDate: v})} />
-            </span>
-          </div>
+          <div className="flex gap-2 items-baseline font-black"><span className="text-[#cca43b] uppercase w-24">Reopening:</span><span className="flex-1 border-b border-black text-center">{settings.reopeningDate}</span></div>
         </div>
-
-        {/* Behavioral Metrics Grid */}
-        {!isWithheld && (
-          <div className="grid grid-cols-4 gap-2 mb-6 text-center">
-             <div className="bg-blue-50/30 p-2 rounded-xl border border-blue-100">
-                <span className="text-[7px] font-black uppercase text-gray-400 block mb-1">Conduct</span>
-                <EditableField 
-                  value={pupil.conduct || "Good"} 
-                  onSave={(val) => onStudentUpdate(pupil.no.toString(), 'conduct', val)}
-                  className="text-[9px] font-black text-[#0f3460] uppercase"
-                />
-             </div>
-             <div className="bg-blue-50/30 p-2 rounded-xl border border-blue-100">
-                <span className="text-[7px] font-black uppercase text-gray-400 block mb-1">Interests</span>
-                <EditableField 
-                  value={pupil.interest || "Creative Arts"} 
-                  onSave={(val) => onStudentUpdate(pupil.no.toString(), 'interest', val)}
-                  className="text-[9px] font-black text-[#0f3460] uppercase"
-                />
-             </div>
-             <div className="bg-blue-50/30 p-2 rounded-xl border border-blue-100">
-                <span className="text-[7px] font-black uppercase text-gray-400 block mb-1">Attitude</span>
-                <EditableField 
-                  value={pupil.attitude || "Enthusiastic"} 
-                  onSave={(val) => onStudentUpdate(pupil.no.toString(), 'attitude', val)}
-                  className="text-[9px] font-black text-[#0f3460] uppercase"
-                />
-             </div>
-             <div className="bg-blue-50/30 p-2 rounded-xl border border-blue-100">
-                <span className="text-[7px] font-black uppercase text-gray-400 block mb-1">Punctuality</span>
-                <EditableField 
-                  value={pupil.punctuality || "Punctual"} 
-                  onSave={(val) => onStudentUpdate(pupil.no.toString(), 'punctuality', val)}
-                  className="text-[9px] font-black text-[#0f3460] uppercase"
-                />
-             </div>
-          </div>
-        )}
 
         <div className="mb-6">
           <h3 className="text-[10px] font-black uppercase text-[#cca43b] mb-2 tracking-widest">Learning Area Achievement(s)</h3>
-          {isWithheld ? (
-             <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center bg-gray-50">
-               <span className="text-2xl opacity-40">🔐</span>
-               <p className="text-[10px] font-black text-gray-400 uppercase mt-2">Achievement Data Withheld (Outstanding Fees)</p>
-             </div>
-          ) : (
-            <table className="w-full text-xs border-2 border-black border-collapse">
-              <thead className="bg-gray-100 text-[#0f3460] uppercase font-black text-[9px]">
-                <tr>
-                  <th className="p-2 border border-black text-left">Learning Area Pillar</th>
-                  <th className="p-2 border border-black text-center w-12">Grade</th>
-                  <th className="p-2 border border-black text-center w-24">Interpretation</th>
-                  <th className="p-2 border border-black text-center w-24">Interest</th>
-                  <th className="p-2 border border-black text-left">Facilitator Remark</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pupil.computedScores.map(subj => {
-                  const gradeObj = getDaycareGrade(subj.score, coreConfig);
-                  const showsInterest = subj.score >= subj.classAverage;
-                  return (
-                    <tr key={subj.name} className="hover:bg-gray-50 transition">
-                      <td className="p-2 border border-black font-black uppercase bg-gray-50">{subj.name}</td>
-                      <td className="p-2 border border-black text-center font-black text-lg" style={{ color: gradeObj.color }}>{gradeObj.label}</td>
-                      <td className="p-2 border border-black text-center text-[7px] font-bold uppercase text-gray-500">{gradeObj.remark}</td>
-                      <td className={`p-2 border border-black text-center text-[7px] font-black uppercase ${showsInterest ? 'text-green-600' : 'text-orange-500'}`}>
-                        {showsInterest ? 'HIGH INTEREST' : 'DEVELOPING INTEREST'}
-                      </td>
-                      <td className="p-2 border border-black italic text-[10px] text-gray-500 leading-tight">{subj.remark}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+          <table className="w-full text-xs border-2 border-black border-collapse">
+            <thead className="bg-gray-100 text-[#0f3460] uppercase font-black text-[9px]">
+              <tr>
+                <th className="p-2 border border-black text-left">Learning Area Pillar</th>
+                <th className="p-2 border border-black text-center w-12">Grade</th>
+                <th className="p-2 border border-black text-center w-24">Interpretation</th>
+                <th className="p-2 border border-black text-center w-24">Interest</th>
+                <th className="p-2 border border-black text-left">Facilitator Remark</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pupil.computedScores.map(subj => {
+                const gradeObj = getDaycareGrade(subj.score, coreConfig);
+                const showsInterest = subj.score >= subj.classAverage;
+                return (
+                  <tr key={subj.name} className="hover:bg-gray-50 transition">
+                    <td className="p-2 border border-black font-black uppercase bg-gray-50">{subj.name}</td>
+                    <td className="p-2 border border-black text-center font-black text-lg" style={{ color: gradeObj.color }}>{gradeObj.label}</td>
+                    <td className="p-2 border border-black text-center text-[7px] font-bold uppercase text-gray-500">{gradeObj.remark}</td>
+                    <td className={`p-2 border border-black text-center text-[7px] font-black uppercase ${showsInterest ? 'text-green-600' : 'text-orange-500'}`}>
+                      {showsInterest ? 'HIGH INTEREST' : 'DEVELOPING INTEREST'}
+                    </td>
+                    <td className="p-2 border border-black italic text-[10px] text-gray-500 leading-tight">{subj.remark}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
 
         <div className="mb-6 flex-1 overflow-y-auto">
           <h3 className="text-[10px] font-black uppercase text-[#cca43b] mb-2 tracking-widest">Developmental Indicators</h3>
-          {isWithheld ? (
-             <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center bg-gray-50">
-                <p className="text-[10px] font-black text-gray-400 uppercase">Assessment Details Locked</p>
-             </div>
-          ) : evaluatedSkills.length > 0 ? (
+          {evaluatedSkills.length > 0 ? (
             <table className="w-full text-[10px] border-2 border-black border-collapse">
               <thead className="bg-[#0f3460] text-white uppercase text-[8px] font-black">
                 <tr>
@@ -256,13 +196,13 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
 
         {/* Promotion Logic for Term 3 */}
         {settings.currentTerm === 3 && (
-          <div className={`mb-4 p-4 rounded-xl flex justify-between items-center border-4 ${isWithheld ? 'bg-red-50 border-red-200' : 'bg-[#0f3460] border-[#cca43b]'}`}>
-             <div className={isWithheld ? 'text-red-900' : 'text-white'}>
-                <span className={`text-[9px] font-black uppercase ${isWithheld ? 'text-red-500' : 'text-[#cca43b]'}`}>Curriculum Status</span>
-                <h4 className="text-sm font-black uppercase leading-none">{promotionLabel}</h4>
+          <div className="mb-4 bg-[#0f3460] p-4 rounded-xl flex justify-between items-center border-4 border-[#cca43b]">
+             <div className="text-white">
+                <span className="text-[9px] font-black uppercase text-[#cca43b]">Curriculum Status</span>
+                <h4 className="text-xl font-black uppercase leading-none">PROMOTED TO:</h4>
              </div>
-             <div className={`px-8 py-2 rounded-lg font-black text-2xl uppercase tracking-tighter ${isWithheld ? 'bg-white text-red-600 border border-red-100' : 'bg-white text-[#0f3460]'}`}>
-               {(!isWithheld) ? getNextClass(activeClass) : '--'}
+             <div className="bg-white px-8 py-2 rounded-lg text-[#0f3460] font-black text-2xl uppercase tracking-tighter">
+               {getNextClass(activeClass)}
              </div>
           </div>
         )}
@@ -271,7 +211,7 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
             <span className="text-[8px] font-black uppercase text-gray-400 block mb-1">Overall Assessment Summary (Holistic View)</span>
             <EditableField 
-              value={isWithheld ? "RECORDS WITHHELD DUE TO NON-PAYMENT" : pupil.overallRemark} 
+              value={pupil.overallRemark} 
               onSave={v => onStudentUpdate(pupil.no.toString(), 'finalRemark', v)} 
               multiline 
               className="italic font-serif leading-relaxed" 
@@ -288,13 +228,9 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
                     className="text-center"
                  />
                </div>
-               <div className="border-t-2 border-black pt-1 text-center">
+               <div className="border-t-2 border-black pt-1">
                  <p className="text-[9px] font-black uppercase tracking-widest leading-none">Headteacher Signature / Stamp</p>
-                 <EditableField 
-                    value={settings.reportFooterText || "Official United Baylor Academy Seal"} 
-                    onSave={(v) => onSettingsChange({...settings, reportFooterText: v})}
-                    className="text-[7px] text-gray-400 font-bold uppercase mt-1"
-                 />
+                 <p className="text-[7px] text-gray-400 font-bold uppercase mt-1">Official United Baylor Academy Seal</p>
                </div>
             </div>
           </div>

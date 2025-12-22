@@ -33,13 +33,11 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Initialize students from LocalStorage (Browser Temporary Storage)
   const [students, setStudents] = useState<Student[]>(() => {
     const saved = localStorage.getItem('uba_students');
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Initialize settings from LocalStorage (Browser Temporary Storage)
   const [settings, setSettings] = useState<GlobalSettings>(() => {
     const saved = localStorage.getItem('uba_settings');
     const defaultSettings: GlobalSettings = {
@@ -97,15 +95,6 @@ const App: React.FC = () => {
     return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
   });
 
-  // AUTO-SAVE TO BROWSER (TEMPORARY STORAGE)
-  // This effect runs every time students or settings change, keeping data in the browser.
-  useEffect(() => {
-    localStorage.setItem('uba_students', JSON.stringify(students));
-    localStorage.setItem('uba_settings', JSON.stringify(settings));
-    // Optional: Log to console for dev awareness
-    // console.log("Local browser storage updated.");
-  }, [students, settings]);
-
   // Cloud Hydration on Mount
   useEffect(() => {
     try {
@@ -115,8 +104,7 @@ const App: React.FC = () => {
         google.script.run.withSuccessHandler((cloudData: string) => {
           if (cloudData) {
             const parsed = JSON.parse(cloudData);
-            // Only overwrite if cloud data exists
-            if (parsed.students && parsed.students.length > 0) setStudents(parsed.students);
+            if (parsed.students) setStudents(parsed.students);
             if (parsed.settings) setSettings(parsed.settings);
             notify("Cloud data synchronized successfully.", "success");
           }
@@ -133,7 +121,6 @@ const App: React.FC = () => {
 
   const handleSave = () => {
     setIsSyncing(true);
-    // Explicitly update local storage one last time before cloud sync
     localStorage.setItem('uba_settings', JSON.stringify(settings));
     localStorage.setItem('uba_students', JSON.stringify(students));
 
@@ -201,12 +188,6 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-6">
-           {/* Visual Indicator of temporary storage */}
-           <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 no-print">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-[10px] font-black uppercase text-white/80">Local Sync Active</span>
-           </div>
-
            <div className="bg-white/10 p-1 rounded-xl flex items-center gap-2 border border-white/20">
               <button onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.1))} className="w-8 h-8 rounded-lg hover:bg-white/20 font-black">-</button>
               <span className="text-[10px] font-black w-12 text-center">{Math.round(zoomLevel * 100)}%</span>

@@ -143,13 +143,7 @@ export interface Student {
   recommendation?: string;
   overallRemark?: string;
   finalRemark?: string;
-  conduct?: string;
-  interest?: string;
-  attitude?: string;
-  punctuality?: string;
   payments?: Record<string, any>;
-  isFeesCleared: boolean;
-  promotionStatus?: string;
 }
 
 export interface EarlyChildhoodGradeRange {
@@ -235,8 +229,6 @@ export interface GlobalSettings {
   exerciseEntries?: DailyExerciseEntry[];
   sbaConfigs: Record<string, Record<string, SBAConfig>>;
   sbaMarksLocked: boolean;
-  reportTitle?: string;
-  reportFooterText?: string;
 }
 
 export interface AcademicCalendarWeek {
@@ -321,12 +313,6 @@ export interface Pupil {
   recommendation: string;
   attendance: string;
   classSize?: number;
-  isFeesCleared: boolean;
-  promotionStatus?: string;
-  conduct?: string;
-  interest?: string;
-  attitude?: string;
-  punctuality?: string;
 }
 
 export interface FacilitatorStats {

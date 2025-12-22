@@ -18,7 +18,7 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
     firstName: '', surname: '', dob: '', sex: 'Male', classApplyingFor: 'Basic 1',
     father: { name: '', contact: '', occupation: '', wivesCount: 1 } as any,
     mother: { name: '', contact: '', occupation: '' } as any,
-    livesWith: 'Both Parents', hasSpecialNeeds: false, isFeesCleared: false
+    livesWith: 'Both Parents', hasSpecialNeeds: false
   });
 
   // Derived data
@@ -35,7 +35,7 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
       status: 'Pending',
       createdAt: new Date().toISOString(),
       currentClass: applicantForm.classApplyingFor!,
-      scoreDetails: {}, attendance: {}, payments: {}, isFeesCleared: false
+      scoreDetails: {}, attendance: {}, payments: {}
     } as Student;
     
     onStudentsUpdate([...students, newStudent]);
@@ -74,11 +74,6 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
       return s;
     }));
     notify("Pupil Admitted Successfully. Official ID Generated.", "success");
-  };
-
-  const toggleFees = (id: string) => {
-    onStudentsUpdate(students.map(s => s.id === id ? { ...s, isFeesCleared: !s.isFeesCleared } : s));
-    notify("Fee clearance status updated.", "info");
   };
 
   const deleteStale = () => {
@@ -213,14 +208,7 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
             <div className="overflow-x-auto">
               <table className="w-full text-left text-[11px]">
                 <thead className="bg-gray-50 text-[#0f3460] font-black uppercase">
-                  <tr>
-                    <th className="p-4">Serial ID</th>
-                    <th className="p-4">Name</th>
-                    <th className="p-4">Gender</th>
-                    <th className="p-4">Fees Status</th>
-                    <th className="p-4">Promotion Status</th>
-                    <th className="p-4">Action</th>
-                  </tr>
+                  <tr><th className="p-4">Serial ID</th><th className="p-4">Name</th><th className="p-4">Gender</th><th className="p-4">DOB</th><th className="p-4">Parent Contact</th></tr>
                 </thead>
                 <tbody>
                   {classList.map(s => (
@@ -228,20 +216,8 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
                       <td className="p-4 font-black">{s.serialId}</td>
                       <td className="p-4 font-black uppercase">{s.firstName} {s.surname}</td>
                       <td className="p-4 font-bold">{s.sex}</td>
-                      <td className="p-4">
-                        <button 
-                          onClick={() => toggleFees(s.id)}
-                          className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${s.isFeesCleared ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
-                        >
-                          {s.isFeesCleared ? 'Cleared' : 'Owing'}
-                        </button>
-                      </td>
-                      <td className="p-4">
-                         <span className="text-[9px] font-bold text-gray-400 uppercase italic">
-                           {s.promotionStatus || '--'}
-                         </span>
-                      </td>
-                      <td className="p-4 font-mono text-gray-400">{s.father.contact || s.mother.contact}</td>
+                      <td className="p-4 font-mono">{s.dob}</td>
+                      <td className="p-4 font-mono">{s.father.contact || s.mother.contact}</td>
                     </tr>
                   ))}
                 </tbody>

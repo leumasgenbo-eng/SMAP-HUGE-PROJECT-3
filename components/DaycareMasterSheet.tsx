@@ -70,12 +70,7 @@ const DaycareMasterSheet: React.FC<Props> = ({ pupils, students, settings, onSet
           className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b] mb-4" 
         />
         
-        <EditableField 
-          value={settings.reportTitle || "EARLY CHILDHOOD MASTER BROAD SHEET"} 
-          onSave={v => onSettingsChange({...settings, reportTitle: v})}
-          className="text-2xl font-bold text-[#0f3460] uppercase tracking-widest"
-        />
-        <p className="text-lg font-black text-[#cca43b] uppercase mb-1 tracking-widest">CLASS: {activeClass}</p>
+        <h2 className="text-2xl font-bold text-[#0f3460] uppercase tracking-widest">EARLY CHILDHOOD MASTER BROAD SHEET - {activeClass}</h2>
         
         <div className="flex flex-col items-center gap-1 text-sm font-bold text-gray-500 mt-4 mb-4">
           <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} className="uppercase" />
@@ -87,7 +82,7 @@ const DaycareMasterSheet: React.FC<Props> = ({ pupils, students, settings, onSet
         </div>
 
         <div className="mt-4 flex gap-10 text-[10px] font-black uppercase tracking-widest text-gray-400 no-print">
-           <span>Cycle: <EditableField value={settings.academicYear} onSave={v => onSettingsChange({...settings, academicYear: v})} className="inline-block" /></span>
+           <span>Cycle: {settings.academicYear}</span>
            <span>Term: {settings.currentTerm}</span>
            <span>Rating Standard: {settings.earlyChildhoodGrading.indicators.type}-Point Scale</span>
            <button onClick={handleSharePDF} className="bg-[#2e8b57] text-white px-4 py-1 rounded-lg hover:scale-105 transition shadow-lg">Share Broad Sheet</button>
@@ -217,19 +212,11 @@ const DaycareMasterSheet: React.FC<Props> = ({ pupils, students, settings, onSet
       <div className="mt-16 flex justify-end">
         <div className="text-center w-80">
           <div className="h-20 flex items-end justify-center pb-2 italic font-serif text-3xl border-b-2 border-black text-[#0f3460]">
-             <EditableField 
-                value={settings.headteacherName} 
-                onSave={(v) => onSettingsChange({...settings, headteacherName: v})}
-                className="text-center"
-             />
+             H. Baylor
           </div>
           <div className="pt-3">
             <p className="font-black uppercase text-sm tracking-tighter text-[#0f3460]">HEADTEACHER'S AUTHORIZATION</p>
-            <EditableField 
-              value={settings.reportFooterText || "United Baylor Academy Official Certification"} 
-              onSave={v => onSettingsChange({...settings, reportFooterText: v})}
-              className="text-[10px] text-gray-400 italic uppercase mt-1"
-            />
+            <p className="text-[10px] text-gray-400 italic uppercase mt-1">United Baylor Academy Official Certification</p>
           </div>
         </div>
       </div>

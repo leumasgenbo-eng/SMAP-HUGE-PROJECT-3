@@ -157,13 +157,7 @@ export function processStudentData(students: Student[], settings: GlobalSettings
       overallRemark: s.finalRemark || `Performance is ${cat.toLowerCase()}.`,
       recommendation: s.recommendation || "Continue with intensive review.",
       attendance: presentCount.toString(),
-      classSize: students.length,
-      isFeesCleared: !!s.isFeesCleared,
-      promotionStatus: s.promotionStatus,
-      conduct: s.conduct || "Satisfactory",
-      interest: s.interest || "High Interest",
-      attitude: s.attitude || "Positive",
-      punctuality: s.punctuality || "Regular & Punctual"
+      classSize: students.length
     };
   });
 
