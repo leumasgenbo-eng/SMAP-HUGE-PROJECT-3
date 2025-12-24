@@ -25,8 +25,12 @@ export interface AdmissionTestInfo {
     script: number;
     handwriting: number;
     spelling: number;
+    oral?: number;
+    logic?: number;
   };
-  decision?: 'Retain' | 'Repeat Lower' | 'Skip Higher' | 'Pending Placement';
+  decision?: 'Retain' | 'Repeat Lower' | 'Skip Higher' | 'Pending Placement' | 'Approved' | 'Declined';
+  decisionDate?: string;
+  approvedBy?: string;
 }
 
 export interface FilingRecord {
@@ -39,11 +43,33 @@ export interface FilingRecord {
 export interface StaffRecord {
   id: string;
   name: string;
-  role: string;
+  role: string; // Job Title / Position
   contact: string;
-  category: string;
+  gender: 'Male' | 'Female';
+  dob: string;
+  age?: number;
+  nationality: string;
+  hometown: string;
+  residentialAddress: string;
+  email: string;
+  maritalStatus: 'Single' | 'Married' | 'Divorced' | 'Widowed';
+  category: 'Teaching' | 'Non-Teaching';
+  employmentType: 'Full Time' | 'Part Time' | 'Service Personnel';
   department: string;
-  idNumber: string;
+  workArea?: string; 
+  idNumber: string; // Institutional/Staff ID
+  identificationType: 'Ghana Card' | 'Passport' | 'Voter ID';
+  identificationNumber: string; // National ID number
+  dateOfAppointment: string;
+  authorizedForFinance?: boolean;
+}
+
+export interface StaffIdLog {
+  id: string;
+  staffId: string;
+  staffName: string;
+  issuedAt: string;
+  issuedBy: string;
 }
 
 export interface Challenge {
@@ -53,58 +79,51 @@ export interface Challenge {
   count: number;
 }
 
-export interface InvigilatorSlot {
+export interface TaxConfig {
+  vatRate: number;
+  nhilRate: number;
+  getLevyRate: number;
+  covidLevyRate: number;
+  isTaxEnabled: boolean;
+}
+
+export interface LedgerRecord {
+  id: string;
+  date: string;
+  transactionCode: string;
+  balanceBF: number;
+  newBill: number;
+  taxAmount: number;
+  totalBill: number;
+  amountPaid: number;
+  currentBalance: number;
+  status: 'Full' | 'Partial';
+  category: string;
+  processedBy?: {
+    staffId: string;
+    staffName: string;
+    time: string;
+  };
+}
+
+export interface TransactionAuditLog {
+  id: string;
   date: string;
   time: string;
-  name: string;
-  role: string;
-  subject: string;
-  venue: string;
-  confirmed: boolean;
+  staffId: string;
+  staffName: string;
+  learnerId: string;
+  learnerName: string;
+  amount: number;
+  category: string;
+  transactionCode: string;
 }
 
-export interface DaycareTimeTableSlot {
-  code: string;
-  time: string;
-  activity: string;
-  subject: string;
-  detail: string;
-  tlm: string;
-  remark: string;
-}
-
-export interface LessonPlanAssessment {
-  teacherId?: string;
-  subject?: string;
-  topic?: string;
-  date?: string;
-  week?: number;
-  strand?: string;
-  subStrand?: string;
-  schemeOfWorkStatus?: 'Complete' | 'Incomplete';
-  referenceMaterialsCount?: number;
-  scores?: Record<string, number>;
-  checklists?: Record<string, boolean>;
-  quantitative?: {
-    alignment: number;
-    strategy: number;
-    assessment: number;
-    time: number;
-    engagement: number;
-  };
-  qualitative?: {
-    strengths: string;
-    improvements: string;
-    behaviors: string;
-    patterns: string;
-  };
-  reflective?: {
-    evidence: boolean;
-    feedbackUse: boolean;
-    adjustmentWillingness: boolean;
-  };
-  overallEvaluation?: 'Lesson meets professional standards' | 'Lesson requires improvement' | 'Re-teaching recommended' | 'Follow-up observation required' | string;
-  status: 'Draft' | 'Finalized';
+export interface FinanceConfig {
+  categories: string[];
+  classBills: Record<string, Record<string, number>>; // Class -> Category -> Amount
+  receiptMessage: string;
+  taxConfig: TaxConfig;
 }
 
 export interface Student {
@@ -117,39 +136,143 @@ export interface Student {
   sex: 'Male' | 'Female';
   classApplyingFor: string;
   currentClass: string;
-  status: 'Pending' | 'Scheduled' | 'Results Ready' | 'Admitted' | 'Withdrawn';
+  status: 'Pending' | 'Scheduled' | 'Results Ready' | 'Admitted' | 'Withdrawn' | 'Denied';
   createdAt: string;
+  admissionFeeReceipt: string;
+  admissionFeeDate: string;
   testDetails?: AdmissionTestInfo;
-  birthCertId?: string;
   hasSpecialNeeds: boolean;
-  specialNeedsDetail?: string;
-  lastSchoolAttended?: string;
+  disabilityType?: string;
   father: ParentInfo;
   mother: ParentInfo;
+  parent2?: {
+    name: string;
+    contact: string;
+  };
+  email?: string;
   livesWith: 'Both Parents' | 'Mother' | 'Father' | 'Guardian' | 'Alone';
   scoreDetails: Record<string, { 
     total: number; 
     grade: string; 
     facilitatorRemark?: string;
-    sectionA?: number; // CAT 1 or Indicator Avg
-    sectionB?: number; // CAT 3 or Observation Score
-    sectionC?: number; // CAT 2 (Group)
-    examScore?: number; // End of term exam score
-    mockObj?: number; // Mock Section A
-    mockTheory?: number; // Mock Section B
-    dailyScores?: Record<string, number>; // Date -> Score
+    sectionA?: number; 
+    sectionB?: number; 
+    sectionC?: number; 
+    examScore?: number; 
+    mockObj?: number; 
+    mockTheory?: number; 
+    dailyScores?: Record<string, number>; 
   }>;
   attendance: Record<string, Record<string, string>>;
-  recommendation?: string;
-  overallRemark?: string;
-  finalRemark?: string;
+  lunchRegister: Record<string, string>;
+  generalRegister: Record<string, string>;
+  payments?: Record<string, any>;
+  ledger: LedgerRecord[];
+  isFeesCleared: boolean;
+  promotionStatus?: string;
   conduct?: string;
   interest?: string;
   attitude?: string;
   punctuality?: string;
-  payments?: Record<string, any>;
+  finalRemark?: string;
+  recommendation?: string;
+}
+
+export interface TimeTableSlot {
+  id: string;
+  type: 'PERIOD' | 'BREAK' | 'MANDATORY';
+  label: string;
+  time: string;
+}
+
+export interface GlobalSettings {
+  schoolName: string;
+  address: string;
+  motto: string;
+  email: string;
+  telephone: string;
+  logo: string;
+  currentTerm: 1 | 2 | 3;
+  academicYear: string;
+  mockSeries: string;
+  examStart: string;
+  examEnd: string;
+  reopeningDate: string;
+  headteacherName: string;
+  totalAttendance: number;
+  punctualityThreshold: string; // e.g. '08:00'
+  modulePermissions: Record<string, boolean>;
+  academicCalendar: Record<number, AcademicCalendarWeek[]>;
+  daycareTimeTable: Record<string, Record<string, DaycareTimeTableSlot[]>>;
+  examTimeTables: Record<string, ExamTimeTableSlot[]>;
+  classTimeTables: Record<string, Record<string, string[]>>; 
+  timeTableStructures: Record<string, Record<string, TimeTableSlot[]>>; // Class -> Day -> Rows
+  invigilators: InvigilatorEntry[];
+  observers: ObserverEntry[];
+  staff: StaffRecord[];
+  staffIdLogs: StaffIdLog[];
+  transactionAuditLogs: TransactionAuditLog[];
+  staffAttendance: Record<string, Record<string, { timeIn: string; timeOut: string; status: string }>>; // Date -> StaffID -> Log
+  observationSchedule: Record<string, ObservationScheduleSlot[]>;
+  activeDevelopmentIndicators: string[];
+  customSubjects: string[];
+  disabledSubjects: string[];
+  questionBank: Record<string, Record<string, string>>;
+  teacherConstraints: Record<string, string[]>; // Subject -> ['Monday', 'Wednesday']
+  subjectDemands: Record<string, number>; // Subject -> Periods Per Week
+  promotionConfig: {
+    passCutOffGrade: number;
+    exceptionalCutOffGrade: number;
+    expectedAttendanceRate: number;
+    averageClassSize: number;
+  };
+  earlyChildhoodGrading: {
+    core: EarlyChildhoodGradingConfig;
+    indicators: EarlyChildhoodGradingConfig;
+  };
+  popoutLists: {
+    activities: string[];
+    leadTeam: string[];
+    extraCurricular: string[];
+    daycareDetails: Record<string, string[]>;
+    tlms: string[];
+    remarks: string[];
+    observationNotes: string[];
+    facilitatorRemarks: string[];
+    generalRemarks: string[];
+    punctualityRemarks: string[];
+    nonTeachingAreas: string[];
+  };
+  gradingSystemRemarks: Record<string, string>;
+  facilitatorMapping: Record<string, string>;
+  submittedSubjects: string[];
+  activeIndicators: string[];
+  exerciseEntries?: DailyExerciseEntry[];
+  sbaConfigs: Record<string, Record<string, SBAConfig>>;
+  sbaMarksLocked: boolean;
+  reportTitle?: string;
+  reportFooterText?: string;
+  financeConfig: FinanceConfig;
+}
+
+export interface Pupil {
+  no: number;
+  name: string;
+  scores: Record<string, number>;
+  aggregate: number;
+  categoryCode: string;
+  category: string;
+  computedScores: any[];
+  overallRemark: string;
+  recommendation: string;
+  attendance: string;
+  classSize?: number;
   isFeesCleared: boolean;
   promotionStatus?: string;
+  conduct?: string;
+  interest?: string;
+  attitude?: string;
+  punctuality?: string;
 }
 
 export interface EarlyChildhoodGradeRange {
@@ -178,65 +301,56 @@ export interface SBAConfig {
   cat3: CATConfig;
 }
 
-export interface GlobalSettings {
-  schoolName: string;
-  address: string;
-  motto: string;
-  email: string;
-  telephone: string;
-  logo: string;
-  currentTerm: 1 | 2 | 3;
-  academicYear: string;
-  mockSeries: string;
-  examStart: string;
-  examEnd: string;
-  reopeningDate: string;
-  headteacherName: string;
-  totalAttendance: number;
-  modulePermissions: Record<string, boolean>;
-  academicCalendar: Record<number, AcademicCalendarWeek[]>;
-  daycareTimeTable: Record<string, Record<string, DaycareTimeTableSlot[]>>;
-  examTimeTables: Record<string, ExamTimeTableSlot[]>;
-  classTimeTables: Record<string, Record<string, string[]>>; 
-  invigilators: InvigilatorEntry[];
-  observers: ObserverEntry[];
-  staff: StaffRecord[];
-  observationSchedule: Record<string, ObservationScheduleSlot[]>;
-  activeDevelopmentIndicators: string[];
-  customSubjects: string[];
-  disabledSubjects: string[];
-  questionBank: Record<string, Record<string, string>>;
-  promotionConfig: {
-    passCutOffGrade: number;
-    exceptionalCutOffGrade: number;
-    expectedAttendanceRate: number;
-    averageClassSize: number;
+export interface LessonPlanAssessment {
+  id: string;
+  teacherId?: string;
+  subject?: string;
+  topic?: string;
+  date?: string;
+  week?: number;
+  strand?: string;
+  subStrand?: string;
+  schemeOfWorkStatus?: 'Complete' | 'Incomplete';
+  referenceMaterialsCount?: number;
+  scores: Record<string, number>;
+  checklists: Record<string, boolean>;
+  quantitative: {
+    alignment: number;
+    strategy: number;
+    assessment: number;
+    time: number;
+    engagement: number;
   };
-  earlyChildhoodGrading: {
-    core: EarlyChildhoodGradingConfig;
-    indicators: EarlyChildhoodGradingConfig;
+  qualitative: {
+    strengths: string;
+    improvements: string;
+    behaviors: string;
+    patterns: string;
   };
-  popoutLists: {
-    activities: string[];
-    leadTeam: string[];
-    extraCurricular: string[];
-    daycareDetails: Record<string, string[]>;
-    tlms: string[];
-    remarks: string[];
-    observationNotes: string[];
-    facilitatorRemarks: string[];
-    generalRemarks: string[];
-    punctualityRemarks: string[];
+  reflective: {
+    evidence: boolean;
+    feedbackUse: boolean;
+    adjustmentWillingness: boolean;
   };
-  gradingSystemRemarks: Record<string, string>;
-  facilitatorMapping: Record<string, string>;
-  submittedSubjects: string[];
-  activeIndicators: string[];
-  exerciseEntries?: DailyExerciseEntry[];
-  sbaConfigs: Record<string, Record<string, SBAConfig>>;
-  sbaMarksLocked: boolean;
-  reportTitle?: string;
-  reportFooterText?: string;
+  status: 'Draft' | 'Finalized';
+  overallEvaluation?: string;
+}
+
+export interface GradingScale {
+  grade: string;
+  value: number;
+  zScore: number;
+  remark: string;
+  color: string;
+}
+
+export interface FacilitatorStats {
+  subject: string;
+  facilitator: string;
+  distribution: Record<string, number>;
+  totalPupils: number;
+  performancePercentage: number;
+  grade: string;
 }
 
 export interface AcademicCalendarWeek {
@@ -248,24 +362,35 @@ export interface AcademicCalendarWeek {
   extraCurricular: string;
 }
 
-export interface DailyExerciseEntry {
+export interface ObserverEntry {
   id: string;
-  subject: string;
-  week: number;
+  staffId: string;
+  name: string;
+  role: 'Supervisory' | 'Facilitator' | 'Facilitator Assistant' | 'Caregiver' | 'Guest Resource';
+  active: boolean;
+}
+
+export interface InvigilatorEntry {
+  id: string;
   date: string;
-  type: 'Classwork' | 'Homework' | 'Project';
-  strand: string;
-  subStrand: string;
-  indicator: string;
-  bloomTaxonomy: string[];
-  handwritingRating: number;
-  clarityRating: number;
-  appearanceRating: number;
-  spellingCount?: number;
-  hasTestItemPrepared: boolean;
-  confirmedWithPupilId?: string;
-  pupilStatus: Record<string, 'Marked' | 'Defaulter' | 'Missing'>;
-  isLateSubmission: boolean;
+  time: string;
+  facilitatorName: string;
+  role: string;
+  subject: string;
+  venue: string;
+  confirmed: boolean;
+}
+
+export type InvigilatorSlot = InvigilatorEntry;
+
+export interface DaycareTimeTableSlot {
+  code: string;
+  time: string;
+  activity: string;
+  subject: string;
+  detail: string;
+  tlm: string;
+  remark: string;
 }
 
 export interface ExamTimeTableSlot {
@@ -278,25 +403,6 @@ export interface ExamTimeTableSlot {
   isBreak: boolean;
 }
 
-export interface InvigilatorEntry {
-  id: string;
-  date: string;
-  time: string;
-  facilitatorName: string;
-  role: 'Chief Invigilator' | 'Invigilator' | 'Officer';
-  subject: string;
-  venue: string;
-  confirmed: boolean;
-}
-
-export interface ObserverEntry {
-  id: string;
-  name: string;
-  role: 'Supervisory' | 'Facilitator' | 'Facilitator Assistant' | 'Caregiver' | 'Guest Resource';
-  active: boolean;
-  staffId?: string;
-}
-
 export interface ObservationScheduleSlot {
   id: string;
   date: string;
@@ -306,42 +412,25 @@ export interface ObservationScheduleSlot {
   observerId: string;
   pupilGroup: string[];
   activityIndicator: string;
-  status: 'Pending' | 'Completed' | 'Postponed' | 'Cancelled';
+  status: 'Pending' | 'Completed';
 }
 
-export interface Pupil {
-  no: number;
-  name: string;
-  scores: Record<string, number>;
-  aggregate: number;
-  categoryCode: string;
-  category: string;
-  computedScores: any[];
-  overallRemark: string;
-  recommendation: string;
-  attendance: string;
-  classSize?: number;
-  isFeesCleared: boolean;
-  promotionStatus?: string;
-  conduct?: string;
-  interest?: string;
-  attitude?: string;
-  punctuality?: string;
-}
-
-export interface FacilitatorStats {
+export interface DailyExerciseEntry {
+  id: string;
   subject: string;
-  facilitator: string;
-  distribution: Record<string, number>;
-  totalPupils: number;
-  performancePercentage: number;
-  grade: string;
-}
-
-export interface GradingScale {
-  grade: string;
-  value: number;
-  zScore: number;
-  remark: string;
-  color: string;
+  week: number;
+  type: 'Classwork' | 'Homework' | 'Project';
+  bloomTaxonomy: string[];
+  pupilStatus: Record<string, 'Marked' | 'Defaulter' | 'Missing'>;
+  hasTestItemPrepared: boolean;
+  handwritingRating: number;
+  clarityRating: number;
+  appearanceRating: number;
+  isLateSubmission: boolean;
+  indicator?: string;
+  strand?: string;
+  subStrand?: string;
+  spellingCount?: number;
+  confirmedWithPupilId?: string;
+  date?: string;
 }

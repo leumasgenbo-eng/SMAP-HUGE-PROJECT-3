@@ -32,9 +32,9 @@ export const ROLES = {
   FACILITATOR: 'Facilitator'
 } as const;
 
-export const SUBJECT_ORDER = ["Mathematics", "English Language", "Science", "Social Studies", "History", "Religious and Moral education", "French", "Computing"];
+export const SUBJECT_ORDER = ["Mathematics", "English Language", "Science", "Social Studies", "History", "Religious and Moral education", "French", "I.C.T", "Physical Education"];
 
-export const ELECTIVE_SUBJECTS = ["Religious and Moral education", "French", "Career Technology", "Creative arts and designing", "Ghanaian Language", "Computing", "I.C.T"];
+export const ELECTIVE_SUBJECTS = ["Religious and Moral education", "French", "Career Technology", "Creative arts and designing", "Ghanaian Language", "I.C.T", "Physical Education"];
 
 export const FILING_CABINET_STRUCTURE = {
   'Academic Records': ['Terminal Reports', 'Broad Sheets', 'SBA Records'],
@@ -56,22 +56,22 @@ export function getSubjectsForDepartment(dept: string): string[] {
   if (dept === 'JHS') return [
     "Mathematics", "English Language", "Science", "Social Studies", 
     "Religious and Moral education", "French", "Career Technology", 
-    "Creative arts and designing", "Ghanaian Language", "Computing"
+    "Creative arts and designing", "Ghanaian Language", "Computing", "Physical Education"
   ];
   if (dept === 'Lower') return [
     "Mathematics", "English Language", "Science", "History", 
     "Our World Our People", "French", "Creative Arts", 
-    "Ghanaian Language", "Computing"
+    "Ghanaian Language", "I.C.T", "Physical Education"
   ];
   if (dept === 'Upper') return [
     "Mathematics", "English Language", "Science", "History", 
     "Religious and Moral Education", "French", "Creative Arts", 
-    "Ghanaian Language", "Computing"
+    "Ghanaian Language", "I.C.T", "Physical Education"
   ];
   if (dept.includes('Basic')) return [
     "Mathematics", "English Language", "Science", "History", 
     "Religious and Moral education", "French", "Creative arts", 
-    "Ghanaian Language", "Computing"
+    "Ghanaian Language", "I.C.T", "Physical Education"
   ];
   if (dept === 'D&N' || dept === 'KG') return ["Language & Literacy", "Numeracy", "OWOP", "Creative Activity"];
   return ["General"];

@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
-import { Student, GlobalSettings, SBAConfig, CATConfig } from '../types';
+import { Student, GlobalSettings } from '../types';
 import EditableField from './EditableField';
-import { getSubjectsForDepartment, BLOOM_TAXONOMY, CORE_SUBJECTS } from '../constants';
+import { getSubjectsForDepartment } from '../constants';
 
 interface Props {
   module: string;
@@ -16,382 +16,83 @@ interface Props {
 }
 
 const GenericModule: React.FC<Props> = ({ module, department, activeClass, students, settings, onSettingsChange, onStudentUpdate, notify }) => {
-  const [selectedSbaSubject, setSelectedSbaSubject] = useState(getSubjectsForDepartment(department)[0]);
-  const [activeDay, setActiveDay] = useState('Monday');
-  const [showManagementDesk, setShowManagementDesk] = useState(false);
-
-  const subjects = getSubjectsForDepartment(department);
-  const isBasicOrJHS = department.includes('Basic') || department === 'JHS';
-
-  // --- Timetable Logic ---
+  const subjects = useMemo(() => getSubjectsForDepartment(department), [department]);
+  const [isBroadSheetMode, setIsBroadSheetMode] = useState(false);
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  
-  // Customary Blocks
-  const customaryItems = ["Worship", "Library", "PLC Meeting", "Club Activity", "Singing & Hymns", "Extra-Curricular"];
-
-  const dailyStructure = [
-    { type: 'MANDATORY', label: 'Morning Assembly', time: '07:30 - 07:40' },
-    { type: 'MANDATORY', label: 'Worship / Devotion', time: '07:40 - 08:00' },
-    { type: 'PERIOD', label: 'Period 1', time: '08:00 - 08:40', slotIndex: 0 },
-    { type: 'PERIOD', label: 'Period 2', time: '08:40 - 09:20', slotIndex: 1 },
-    { type: 'PERIOD', label: 'Period 3', time: '09:20 - 10:00', slotIndex: 2 },
-    { type: 'BREAK', label: 'Snack Break', time: '10:00 - 10:30' },
-    { type: 'PERIOD', label: 'Period 4', time: '10:30 - 11:10', slotIndex: 3 },
-    { type: 'MANDATORY', label: 'Afternoon Assembly', time: '11:10 - 11:20' },
-    { type: 'PERIOD', label: 'Period 5', time: '11:20 - 12:00', slotIndex: 4 },
-    { type: 'BREAK', label: 'Lunch Break', time: '12:00 - 12:40' },
-    { type: 'PERIOD', label: 'Period 6', time: '12:40 - 13:20', slotIndex: 5 },
-    { type: 'PERIOD', label: 'Period 7', time: '13:20 - 14:00', slotIndex: 6 },
-    { type: 'MANDATORY', label: 'Closing / PLC / Ext.', time: '14:00 - 14:45' },
-  ];
-
-  const classTT = settings.classTimeTables?.[activeClass]?.[activeDay] || Array(7).fill('');
-
-  const updateTTSlot = (slotIdx: number, val: string) => {
-    const dayTT = [...classTT];
-    dayTT[slotIdx] = val;
-    const classConfig = settings.classTimeTables?.[activeClass] || {};
-    onSettingsChange({
-      ...settings,
-      classTimeTables: {
-        ...settings.classTimeTables,
-        [activeClass]: { ...classConfig, [activeDay]: dayTT }
-      }
-    });
-  };
-
-  const handleAutoGenerate = () => {
-    const generated: Record<string, string[]> = {};
-    days.forEach(day => {
-      const daySlots = Array(7).fill('');
-      const shuffled = [...subjects].sort(() => Math.random() - 0.5);
-      
-      for(let i=0; i<7; i++) {
-        // Simple logic: pick subject, ensure not consecutive unless customary
-        let pick = shuffled[i % shuffled.length];
-        if (i > 0 && daySlots[i-1] === pick) {
-          pick = shuffled[(i + 1) % shuffled.length];
-        }
-        daySlots[i] = pick;
-      }
-      generated[day] = daySlots;
-    });
-
-    onSettingsChange({
-      ...settings,
-      classTimeTables: {
-        ...settings.classTimeTables,
-        [activeClass]: generated
-      }
-    });
-    notify(`Class Timetable for ${activeClass} generated based on curriculum demand!`, "success");
-  };
-
-  const getSlotStatus = (subj: string, idx: number) => {
-    if (!subj) return { color: 'bg-gray-50 text-gray-300 italic', label: 'PASS' };
-    
-    // Rule 6.1: Consecutive Repetition (Orange)
-    if (idx > 0 && classTT[idx - 1] === subj) {
-      return { color: 'bg-orange-100 text-orange-800 border-orange-200', label: '🟠 REPETITION RISK' };
-    }
-
-    // Teacher Conflict (Red) - Mocked logic for demo
-    if (subj === 'Mathematics' && activeClass.includes('Basic 8') && activeDay === 'Monday' && idx === 2) {
-       return { color: 'bg-red-100 text-red-800 border-red-200', label: '🔴 TEACHER CLASH' };
-    }
-
-    // Fatigue (Yellow)
-    if (CORE_SUBJECTS.includes(subj) && idx >= 5) {
-      return { color: 'bg-yellow-50 text-yellow-800 border-yellow-200', label: '🟡 FATIGUE WARNING' };
-    }
-
-    return { color: 'bg-blue-50 text-blue-800 border-blue-200', label: '✅ VALID' };
-  };
-
-  if (module === 'Time Table' && isBasicOrJHS) {
-    return (
-      <div className="space-y-8 animate-fadeIn">
-        {/* Header Section */}
-        <div className="bg-[#0f3460] p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
-          <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
-            <div>
-              <EditableField 
-                value={settings.schoolName} 
-                onSave={v => onSettingsChange({...settings, schoolName: v})} 
-                className="text-4xl font-black uppercase tracking-tighter"
-              />
-              <h2 className="text-xl font-bold text-[#cca43b] uppercase tracking-widest mt-2">Class Time Table Scheduler</h2>
-              <p className="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em] mt-1">Rule-Based Automation • {activeClass}</p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <button onClick={handleAutoGenerate} className="bg-[#cca43b] text-[#0f3460] px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-xl hover:scale-105 transition">Auto-Generate Class TT</button>
-              <button onClick={() => setShowManagementDesk(!showManagementDesk)} className="bg-white/10 text-white border border-white/20 px-8 py-3 rounded-2xl font-black uppercase text-xs hover:bg-white/20 transition">
-                {showManagementDesk ? 'Close Management Desk' : 'Time Table Management Desk'}
-              </button>
-            </div>
-          </div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-        </div>
-
-        {showManagementDesk && (
-          <div className="bg-white p-8 rounded-[3rem] shadow-2xl border-4 border-[#cca43b]/20 grid grid-cols-1 md:grid-cols-3 gap-8">
-             <div className="col-span-2">
-                <h3 className="text-xl font-black text-[#0f3460] uppercase mb-4 tracking-tighter">Conflict & Compliance Inspector</h3>
-                <div className="space-y-3">
-                   <div className="flex items-center gap-4 p-4 bg-red-50 rounded-2xl border border-red-100">
-                      <span className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center text-white font-black">!</span>
-                      <div className="flex-1">
-                        <p className="text-xs font-black text-red-800 uppercase">Clash Detected (Basic 8 / Basic 9)</p>
-                        <p className="text-[10px] text-red-600 font-bold">Sir Michael (Math) is assigned to two locations at 9:20am.</p>
-                      </div>
-                      <button className="bg-red-800 text-white px-4 py-1.5 rounded-xl text-[9px] font-black uppercase">Swap Slot</button>
-                   </div>
-                   <div className="flex items-center gap-4 p-4 bg-orange-50 rounded-2xl border border-orange-100">
-                      <span className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-black">W</span>
-                      <div className="flex-1">
-                        <p className="text-xs font-black text-orange-800 uppercase">Consecutive Limit Violation</p>
-                        <p className="text-[10px] text-orange-600 font-bold">English Language exceeds 2 continuous periods without break.</p>
-                      </div>
-                   </div>
-                </div>
-             </div>
-             <div className="bg-gray-50 p-6 rounded-[2.5rem]">
-                <h4 className="text-xs font-black text-gray-400 uppercase mb-4 tracking-widest">Global Constraints</h4>
-                <ul className="space-y-4 text-[10px] font-black text-gray-600 uppercase">
-                   <li className="flex justify-between"><span>Morning Assembly:</span> <span className="text-green-600">LOCKED (10m)</span></li>
-                   <li className="flex justify-between"><span>Worship / Devotion:</span> <span className="text-green-600">LOCKED (20m)</span></li>
-                   <li className="flex justify-between"><span>Snack Break:</span> <span className="text-green-600">LOCKED (30m)</span></li>
-                   <li className="flex justify-between"><span>Afternoon Assembly:</span> <span className="text-green-600">LOCKED (10m)</span></li>
-                   <li className="flex justify-between"><span>Lunch Break:</span> <span className="text-green-600">LOCKED (40m)</span></li>
-                   <li className="flex justify-between"><span>Part-Time Sync:</span> <span className="text-blue-600">ACTIVE</span></li>
-                </ul>
-             </div>
-          </div>
-        )}
-
-        {/* Calendar Day Switcher */}
-        <div className="flex justify-center gap-2">
-          {days.map(d => (
-            <button 
-              key={d} 
-              onClick={() => setActiveDay(d)} 
-              className={`px-8 py-3 rounded-2xl text-xs font-black uppercase transition-all ${activeDay === d ? 'bg-[#0f3460] text-white shadow-xl scale-105' : 'bg-white text-gray-400 hover:bg-gray-100'}`}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
-
-        {/* Main Grid */}
-        <div className="bg-white p-6 md:p-12 rounded-[3rem] shadow-2xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-[#f4f6f7] text-[#0f3460] uppercase text-[10px] font-black">
-              <tr>
-                <th className="p-5 border-b">Time Schedule</th>
-                <th className="p-5 border-b">Official Block</th>
-                <th className="p-5 border-b">Instructional Activity</th>
-                <th className="p-5 border-b text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dailyStructure.map((row, i) => {
-                const status = row.type === 'PERIOD' ? getSlotStatus(classTT[row.slotIndex!], row.slotIndex!) : null;
-                return (
-                  <tr key={i} className={`border-b transition-colors ${row.type === 'BREAK' ? 'bg-yellow-50/50' : row.type === 'MANDATORY' ? 'bg-blue-50/20' : 'bg-white hover:bg-gray-50/50'}`}>
-                    <td className="p-5 font-mono text-[11px] text-gray-400 font-black whitespace-nowrap">{row.time}</td>
-                    <td className="p-5">
-                      <span className={`text-[9px] font-black uppercase px-4 py-1.5 rounded-full shadow-sm ${row.type === 'BREAK' ? 'bg-yellow-100 text-yellow-700' : row.type === 'MANDATORY' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {row.label}
-                      </span>
-                    </td>
-                    <td className="p-2">
-                      {row.type === 'PERIOD' && row.slotIndex !== undefined ? (
-                        <select 
-                          className={`w-full p-4 rounded-2xl border-2 font-black text-xs uppercase outline-none focus:ring-4 focus:ring-[#cca43b]/20 transition shadow-inner ${status?.color}`}
-                          value={classTT[row.slotIndex]}
-                          onChange={(e) => updateTTSlot(row.slotIndex!, e.target.value)}
-                        >
-                          <option value="">-- ASSIGN SUBJECT --</option>
-                          <optgroup label="Curriculum Subjects">
-                            {subjects.map(s => <option key={s} value={s}>{s}</option>)}
-                          </optgroup>
-                          <optgroup label="Customary Activities">
-                            {customaryItems.map(c => <option key={c} value={c}>{c}</option>)}
-                          </optgroup>
-                        </select>
-                      ) : (
-                        <div className="p-4 text-[10px] italic text-gray-300 font-black uppercase tracking-widest text-center">Locked Curricular Block</div>
-                      )}
-                    </td>
-                    <td className="p-5 text-center">
-                       {status ? (
-                         <span className="text-[8px] font-black uppercase whitespace-nowrap">{status.label}</span>
-                       ) : (
-                         <span className="text-[15px] opacity-20">🔒</span>
-                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          
-          <div className="mt-10 flex flex-col md:flex-row justify-between items-end gap-6 pt-10 border-t border-dashed border-gray-200">
-             <div className="text-left w-64 border-b-2 border-black pb-2">
-                <p className="text-[10px] font-black text-gray-400 uppercase">Class Facilitator Signature</p>
-             </div>
-             <div className="text-center">
-                <p className="italic font-serif text-3xl text-[#0f3460]">H. Baylor</p>
-                <div className="h-1 bg-[#cca43b] w-full my-2"></div>
-                <p className="text-[10px] font-black uppercase tracking-widest">Headteacher's Certified Approval</p>
-             </div>
-             <button onClick={() => window.print()} className="bg-[#0f3460] text-white px-12 py-4 rounded-[2rem] font-black uppercase text-xs shadow-2xl hover:scale-105 active:scale-95 transition">Print Official Class TT</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // --- Assessment Desk Section ---
-  if (module === 'Class Assessment Test System') {
-    const sbaConfig = settings.sbaConfigs?.[activeClass]?.[selectedSbaSubject] || {
-      cat1: { date: '', marks: 30, questionType: 'Objective & Multiple Choice', bloomTaxonomy: [] },
-      cat2: { date: '', marks: 40, questionType: 'Combination', bloomTaxonomy: [] },
-      cat3: { date: '', marks: 30, questionType: 'Combination', bloomTaxonomy: [] }
-    };
-
-    const handleSbaUpdate = (catKey: 'cat1' | 'cat2' | 'cat3', field: keyof CATConfig, val: any) => {
-      const classConfigs = settings.sbaConfigs?.[activeClass] || {};
-      const currentCat = sbaConfig[catKey];
-      const updatedCat = { ...currentCat, [field]: val };
-      const updatedSba = { ...sbaConfig, [catKey]: updatedCat };
-      
-      const updatedConfigs = { ...settings.sbaConfigs, [activeClass]: { ...classConfigs, [selectedSbaSubject]: updatedSba } };
-      onSettingsChange({ ...settings, sbaConfigs: updatedConfigs });
-    };
-
-    const toggleBloomForCat = (catKey: 'cat1' | 'cat2' | 'cat3', item: string) => {
-      const current = sbaConfig[catKey].bloomTaxonomy || [];
-      const updated = current.includes(item)
-        ? current.filter(i => i !== item)
-        : [...current, item];
-      handleSbaUpdate(catKey, 'bloomTaxonomy', updated);
-    };
-
-    const paperStandards = [
-      'Objective & Multiple Choice',
-      'Short Answers & Data Analysis',
-      'Long Essay & Critical Thinking',
-      'Practical Project & Lab Work',
-      'Combination'
-    ];
-
-    return (
-      <div className="bg-white p-12 rounded-[3rem] shadow-2xl animate-fadeIn space-y-10 border border-gray-100">
-        <div className="bg-[#0f3460] p-10 rounded-[2.5rem] text-white flex justify-between items-center relative overflow-hidden">
-          <div className="relative z-10">
-            <h2 className="text-3xl font-black uppercase tracking-tighter">SBA Configuration Desk</h2>
-            <div className="flex items-center gap-4 mt-2">
-               <select className="bg-white/10 p-2 rounded-xl border-none font-black text-[10px] uppercase min-w-[200px]" value={selectedSbaSubject} onChange={e => setSelectedSbaSubject(e.target.value)}>
-                 {getSubjectsForDepartment(department).map(s => <option key={s} className="text-black">{s}</option>)}
-               </select>
-               <span className="bg-[#cca43b] px-4 py-1 rounded-full text-[9px] font-black">Active Assessment Cycle</span>
-            </div>
-          </div>
-          <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-        </div>
-
-        {settings.sbaMarksLocked && (
-          <div className="bg-red-50 p-6 rounded-[2rem] border border-red-100 flex items-center gap-4">
-             <span className="text-3xl">🔒</span>
-             <div>
-                <h4 className="text-sm font-black text-red-900 uppercase">Weightings Locked by Administration</h4>
-                <p className="text-[10px] font-bold text-red-700/60 uppercase">Marks allocation cannot be modified at the Subject Level currently.</p>
-             </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-           {(['cat1', 'cat2', 'cat3'] as const).map((catKey, idx) => {
-             const cat = sbaConfig[catKey];
-             const label = catKey === 'cat1' ? 'CAT 1 (INDIVIDUAL)' : catKey === 'cat2' ? 'CAT 2 (GROUP WORK)' : 'CAT 3 (INDIVIDUAL)';
-             
-             return (
-               <div key={catKey} className="p-8 bg-gray-50 rounded-[2rem] border border-gray-100 space-y-6 flex flex-col">
-                  <h4 className="text-xs font-black text-[#0f3460] uppercase tracking-widest border-b pb-2">{label}</h4>
-                  
-                  <div className="space-y-4 flex-1">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-gray-400">Execution Date</label>
-                      <input type="date" className="w-full p-3 rounded-xl bg-white border-none font-bold" value={cat.date} onChange={e => handleSbaUpdate(catKey, 'date', e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-gray-400">Marks Allocation</label>
-                      <input 
-                        type="number" 
-                        disabled={settings.sbaMarksLocked}
-                        className={`w-full p-3 rounded-xl bg-white border-none font-bold ${settings.sbaMarksLocked ? 'opacity-50 cursor-not-allowed text-gray-400' : ''}`} 
-                        value={cat.marks} 
-                        onChange={e => handleSbaUpdate(catKey, 'marks', parseInt(e.target.value))} 
-                      />
-                    </div>
-
-                    <div className="space-y-2 pt-4 border-t border-gray-200/50">
-                       <label className="text-[9px] font-black uppercase text-gray-400 block">Bloom's Taxonomy Focus</label>
-                       <div className="flex flex-wrap gap-1.5">
-                          {BLOOM_TAXONOMY.map(b => (
-                            <button 
-                              key={b} 
-                              onClick={() => toggleBloomForCat(catKey, b)}
-                              className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase transition-all ${cat.bloomTaxonomy?.includes(b) ? 'bg-[#0f3460] text-white' : 'bg-white text-gray-400 border border-gray-200 hover:border-[#cca43b]'}`}
-                            >
-                              {b.slice(0, 3)}
-                            </button>
-                          ))}
-                       </div>
-                    </div>
-
-                    <div className="space-y-1 pt-2">
-                       <label className="text-[9px] font-black uppercase text-gray-400 block">Assessment Standard</label>
-                       <select 
-                        className="w-full p-3 rounded-xl bg-white border-none font-black text-[10px] uppercase shadow-sm" 
-                        value={cat.questionType} 
-                        onChange={e => handleSbaUpdate(catKey, 'questionType', e.target.value)}
-                       >
-                         {paperStandards.map(s => <option key={s} value={s}>{s}</option>)}
-                       </select>
-                    </div>
-                  </div>
-               </div>
-             );
-           })}
-        </div>
-
-        <div className="bg-blue-50 p-8 rounded-[2rem]">
-           <h4 className="text-xs font-black text-blue-900 uppercase mb-4 flex items-center gap-2">
-             <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span> Distinct Plan Audit
-           </h4>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-[10px]">
-              {['cat1', 'cat2', 'cat3'].map((ck: any) => (
-                <div key={ck} className="bg-white/50 p-4 rounded-xl space-y-2 italic text-blue-800">
-                   <p className="font-black uppercase not-italic">{ck.toUpperCase()}:</p>
-                   <p>• {sbaConfig[ck as keyof SBAConfig].bloomTaxonomy?.length || 0} Objective areas targeted</p>
-                   <p>• Standard: {sbaConfig[ck as keyof SBAConfig].questionType}</p>
-                </div>
-              ))}
-           </div>
-        </div>
-
-        <div className="flex justify-end gap-4">
-           <button onClick={() => notify("SBA Distinct Cycle Confirmed", "success")} className="bg-[#2e8b57] text-white px-12 py-4 rounded-2xl font-black uppercase text-xs shadow-xl tracking-widest">Confirm All Plans</button>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="bg-white p-12 rounded-[3rem] shadow-2xl border border-gray-100 animate-fadeIn">
-       <div className="text-center py-20 text-gray-300 font-black uppercase italic">Module Placeholder for {module}</div>
+    <div className="space-y-8 animate-fadeIn">
+      {/* Dynamic Institutional Particulars Header */}
+      <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-4 no-print">
+        <EditableField 
+          value={settings.schoolName} 
+          onSave={v => onSettingsChange({...settings, schoolName: v})} 
+          className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter" 
+        />
+        <EditableField 
+          value={settings.motto} 
+          onSave={v => onSettingsChange({...settings, motto: v})} 
+          className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" 
+        />
+        <div className="flex justify-center gap-6 text-[11px] font-black text-gray-400 uppercase tracking-widest pt-2">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-300">ADDR:</span>
+            <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
+          </div>
+          <span>•</span>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-300">TEL:</span>
+            <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
+          </div>
+          <span>•</span>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-300">EMAIL:</span>
+            <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
+          </div>
+        </div>
+      </div>
+
+      {module === 'Time Table' ? (
+        <div className="space-y-8">
+           <div className="bg-[#0f3460] p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden no-print">
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
+              <div>
+                <h2 className="text-2xl font-black uppercase tracking-tighter">Academic Timetable Hub</h2>
+                <p className="text-[10px] font-bold text-[#cca43b] uppercase tracking-widest mt-1 italic">{activeClass} • Full Week Schedule</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setIsBroadSheetMode(!isBroadSheetMode)} className="bg-white/10 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-xl hover:scale-105 transition">
+                  {isBroadSheetMode ? 'Detailed Daily View' : 'Weekly Grid View'}
+                </button>
+                <button onClick={() => window.print()} className="bg-[#cca43b] text-[#0f3460] px-8 py-3 rounded-2xl font-black uppercase text-xs hover:scale-105 transition">Print Official Copy</button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-12 rounded-[3rem] shadow-xl border border-gray-100 min-h-[400px]">
+             <div className="grid grid-cols-6 gap-4">
+                <div className="bg-gray-50 p-4 rounded-2xl font-black text-[10px] uppercase text-gray-400">Period</div>
+                {days.map(d => <div key={d} className="bg-gray-100 p-4 rounded-2xl font-black text-[10px] uppercase text-[#0f3460] text-center">{d}</div>)}
+                
+                {[1,2,3,4,5,6,7,8].map(p => (
+                   <React.Fragment key={p}>
+                      <div className="p-4 flex items-center justify-center font-black text-xs text-gray-300">P{p}</div>
+                      {days.map(d => (
+                         <div key={`${d}-${p}`} className="p-4 border border-gray-50 rounded-2xl min-h-[60px] flex items-center justify-center text-center font-bold text-[9px] uppercase text-gray-500 hover:bg-yellow-50 transition cursor-pointer">
+                            -- UNASSIGNED --
+                         </div>
+                      ))}
+                   </React.Fragment>
+                ))}
+             </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white p-12 rounded-[3rem] shadow-2xl border border-gray-100 animate-fadeIn text-center">
+           <p className="text-gray-300 font-black uppercase italic tracking-widest text-lg">Module: {module}</p>
+           <p className="text-xs text-gray-400 mt-2 font-bold">United Baylor Academy Integrated Management Platform</p>
+        </div>
+      )}
     </div>
   );
 };

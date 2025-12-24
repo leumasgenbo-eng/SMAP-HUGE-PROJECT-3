@@ -28,7 +28,8 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
 
   return (
     <div className="bg-white p-4 md:p-12 shadow-2xl border border-gray-100 min-w-max animate-fadeIn">
-      <div className="text-center mb-12 border-b-4 border-double border-[#0f3460] pb-8">
+      {/* Standard Institutional Particulars Header */}
+      <div className="text-center mb-12 border-b-4 border-double border-[#0f3460] pb-8 flex flex-col items-center">
         <EditableField 
           value={settings.schoolName} 
           onSave={v => onSettingsChange({...settings, schoolName: v})} 
@@ -40,25 +41,21 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
           className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b] mb-4" 
         />
         
-        <div className="flex justify-center gap-4 text-sm font-bold text-gray-500 mb-4">
-          <EditableField 
-            value={settings.address} 
-            onSave={v => onSettingsChange({...settings, address: v})} 
-            className="uppercase" 
-            placeholder="Address..."
-          />
-          <span>|</span>
-          <EditableField 
-            value={settings.telephone} 
-            onSave={v => onSettingsChange({...settings, telephone: v})} 
-            placeholder="Telephone..."
-          />
-          <span>|</span>
-          <EditableField 
-            value={settings.email} 
-            onSave={v => onSettingsChange({...settings, email: v})} 
-            placeholder="Email..."
-          />
+        <div className="flex justify-center gap-6 text-[11px] font-black text-gray-400 uppercase tracking-widest pt-2 no-print mb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-300">ADDR:</span>
+            <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
+          </div>
+          <span>•</span>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-300">TEL:</span>
+            <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
+          </div>
+          <span>•</span>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-300">EMAIL:</span>
+            <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
+          </div>
         </div>
 
         <EditableField 
@@ -66,7 +63,7 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
           onSave={v => onSettingsChange({...settings, reportTitle: v})}
           className="text-xl font-black text-[#0f3460] uppercase mb-1"
         />
-        <p className="text-lg font-black text-[#cca43b] uppercase mb-4 tracking-widest">CLASS: {activeClass}</p>
+        <p className="text-lg font-black text-[#cca43b] uppercase mb-4 tracking-widest italic">DEPARTMENT: {department} • CLASS: {activeClass}</p>
 
         <div className="flex justify-center gap-10 text-[10px] font-black uppercase tracking-widest text-gray-400">
           <span>Academic Year: <EditableField value={settings.academicYear} onSave={v => onSettingsChange({...settings, academicYear: v})} className="inline-block" /></span>
@@ -143,6 +140,18 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
           <p className="text-center italic text-gray-400">Please switch to Daycare Master Sheet for Early Childhood Reporting.</p>
         </div>
       )}
+      
+      <div className="mt-16 flex justify-end">
+        <div className="text-center w-80">
+          <div className="h-20 flex items-end justify-center pb-2 italic font-serif text-3xl border-b-2 border-black text-[#0f3460]">
+             <EditableField value={settings.headteacherName} onSave={v => onSettingsChange({...settings, headteacherName: v})} className="text-center" />
+          </div>
+          <div className="pt-3">
+            <p className="font-black uppercase text-sm tracking-tighter text-[#0f3460]">HEADTEACHER'S AUTHORIZATION</p>
+            <EditableField value={settings.reportFooterText || "Official United Baylor Academy Certification"} onSave={v => onSettingsChange({...settings, reportFooterText: v})} className="text-[10px] text-gray-400 italic uppercase mt-1" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
