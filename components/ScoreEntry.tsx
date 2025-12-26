@@ -14,15 +14,24 @@ interface Props {
   department: string;
   activeClass: string;
   notify: any;
+  isMockMode?: boolean;
 }
 
-const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onSettingsChange, subjectList, department, activeClass, notify }) => {
+const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onSettingsChange, subjectList, department, activeClass, notify, isMockMode = false }) => {
   const [selectedSubject, setSelectedSubject] = useState(subjectList[0] || '');
-  const [hubMode, setHubMode] = useState<'sba' | 'finals' | 'config'>('sba');
+  const [hubMode, setHubMode] = useState<'sba' | 'finals' | 'config'>(isMockMode ? 'finals' : 'sba');
   const [sbaSubTab, setSbaSubTab] = useState<'exercises' | 'cat'>('exercises');
 
-  const isPreschool = department === 'D&N' || department === 'KG';
+  const terminalConfig = settings.terminalConfigs[activeClass] || { sectionAMax: 30, sectionBMax: 70 };
   
+  // Science Exception Logic listening to global scienceThreshold
+  const isScience = selectedSubject.toLowerCase().includes('science');
+  const scienceMax = settings.scienceThreshold || 140;
+  const activeThresholds = (isScience && scienceMax === 140) 
+    ? { a: 40, b: 100 } 
+    : { a: terminalConfig.sectionAMax, b: terminalConfig.sectionBMax };
+  const rawSum = activeThresholds.a + activeThresholds.b;
+
   const handleScoreChange = (id: string, field: string, val: string) => {
     const updated = students.map(s => {
       if (s.id === id) {
@@ -36,9 +45,8 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
           details.facilitatorRemark = val;
         } else {
           let numericVal = parseInt(val) || 0;
-          if (field === 'sbaTotal') details.sectionA = Math.min(numericVal, 50);
-          if (field === 'mockObj') details.mockObj = Math.min(numericVal, 30);
-          if (field === 'mockTheory') details.mockTheory = Math.min(numericVal, 70);
+          if (field === 'mockObj') details.mockObj = Math.min(numericVal, activeThresholds.a);
+          if (field === 'mockTheory') details.mockTheory = Math.min(numericVal, activeThresholds.b);
         }
         
         return { ...s, scoreDetails: { ...(s.scoreDetails || {}), [selectedSubject]: details } };
@@ -65,13 +73,6 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
     const numericVal = Math.min(Math.max(0, parseInt(value) || 0), currentSbaConfig[catKey].marks);
     const updatedScores = { ...(currentSbaConfig[catKey].scores || {}), [studentId]: numericVal };
     updateCatConfig(catKey, 'scores', updatedScores);
-  };
-
-  const toggleBloom = (catKey: 'cat1' | 'cat2' | 'cat3', taxonomy: string) => {
-    if (settings.sbaMarksLocked) return;
-    const currentList = currentSbaConfig[catKey].bloomTaxonomy || [];
-    const newList = currentList.includes(taxonomy) ? currentList.filter(t => t !== taxonomy) : [...currentList, taxonomy];
-    updateCatConfig(catKey, 'bloomTaxonomy', newList);
   };
 
   const weeks = Array.from({ length: 16 }, (_, i) => i + 1);
@@ -104,46 +105,26 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
     onSettingsChange({ ...settings, assessmentWeights: { ...settings.assessmentWeights, [field]: num } });
   };
 
-  const updateTerminalMax = (field: 'sectionAMax' | 'sectionBMax', val: string) => {
-    const num = parseInt(val) || 0;
-    const currentClassConfig = settings.terminalConfigs[activeClass] || { sectionAMax: 30, sectionBMax: 70 };
-    onSettingsChange({ ...settings, terminalConfigs: { ...settings.terminalConfigs, [activeClass]: { ...currentClassConfig, [field]: num } } });
-  };
-
-  const updateScaleRow = (index: number, field: keyof GradingScaleEntry, val: any) => {
-    const updatedScale = [...settings.gradingScale];
-    updatedScale[index] = { ...updatedScale[index], [field]: val };
-    onSettingsChange({ ...settings, gradingScale: updatedScale });
-  };
-
-  const terminalConfig = settings.terminalConfigs[activeClass] || { sectionAMax: 30, sectionBMax: 70 };
-
   return (
     <div className="space-y-6 animate-fadeIn no-print">
-      {/* Institutional Branding Header */}
-      <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-3 mb-6">
-        <EditableField value={settings.schoolName} onSave={v => onSettingsChange({...settings, schoolName: v})} className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter" />
-        <EditableField value={settings.motto} onSave={v => onSettingsChange({...settings, motto: v})} className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" />
-        <div className="flex justify-center gap-6 text-[11px] font-black text-gray-400 uppercase tracking-widest pt-2 border-t border-gray-50 w-full max-w-2xl">
-          <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
-          <span>•</span>
-          <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
-          <span>•</span>
-          <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
-        </div>
-      </div>
-
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div className="space-y-4">
-          <div className="flex gap-4">
-            <button onClick={() => setHubMode('sba')} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg ${hubMode === 'sba' ? 'bg-[#0f3460] text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>SBA / Continuous Assessment</button>
-            <button onClick={() => setHubMode('finals')} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg ${hubMode === 'finals' ? 'bg-[#cca43b] text-[#0f3460]' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>Terminal Paper Entry</button>
-            <button onClick={() => setHubMode('config')} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg ${hubMode === 'config' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>SBA Configuration Desk</button>
-          </div>
-          {hubMode === 'sba' && (
+          {!isMockMode && (
+            <div className="flex gap-4">
+              <button onClick={() => setHubMode('sba')} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg ${hubMode === 'sba' ? 'bg-[#0f3460] text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>SBA / Continuous Assessment</button>
+              <button onClick={() => setHubMode('finals')} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg ${hubMode === 'finals' ? 'bg-[#cca43b] text-[#0f3460]' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>Terminal / Mock Paper Entry</button>
+              <button onClick={() => setHubMode('config')} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg ${hubMode === 'config' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>SBA Configuration Desk</button>
+            </div>
+          )}
+          {hubMode === 'sba' && !isMockMode && (
              <div className="flex gap-2 ml-2">
                 <button onClick={() => setSbaSubTab('exercises')} className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase transition-all ${sbaSubTab === 'exercises' ? 'bg-[#2e8b57] text-white shadow-sm' : 'bg-gray-50 text-gray-300'}`}>Weekly Exercises Broad Sheet</button>
                 <button onClick={() => setSbaSubTab('cat')} className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase transition-all ${sbaSubTab === 'cat' ? 'bg-[#2e8b57] text-white shadow-sm' : 'bg-gray-50 text-gray-300'}`}>CAT Broad Sheet</button>
+             </div>
+          )}
+          {isMockMode && (
+             <div className="bg-[#0f3460] text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg">
+                Mock Examination Entry
              </div>
           )}
         </div>
@@ -156,7 +137,7 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
       </div>
 
       <div className="bg-white rounded-[3rem] border border-gray-100 shadow-2xl overflow-hidden min-h-[400px]">
-        {hubMode === 'config' ? (
+        {hubMode === 'config' && !isMockMode ? (
            <div className="p-10 space-y-10 animate-fadeIn">
               <div className="flex justify-between items-center border-b pb-6">
                  <div>
@@ -165,8 +146,6 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                  </div>
                  {settings.sbaMarksLocked && <div className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 border border-red-100">🔒 Allocation Locked by Admin</div>}
               </div>
-
-              {/* Weighting System Section */}
               <div className="bg-gray-50 p-8 rounded-[2.5rem] space-y-6">
                  <h4 className="text-xs font-black uppercase text-[#0f3460] tracking-widest">Weighting Hierarchy (%)</h4>
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -183,74 +162,9 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                        <input type="number" className="w-full p-4 bg-white rounded-2xl border-none font-black text-blue-600 shadow-sm" value={settings.assessmentWeights.terminal} onChange={e => updateWeight('terminal', e.target.value)} />
                     </div>
                  </div>
-                 <div className="flex justify-end pt-2">
-                    <span className={`text-[10px] font-black uppercase ${settings.assessmentWeights.exercises + settings.assessmentWeights.cats + settings.assessmentWeights.terminal !== 100 ? 'text-red-500' : 'text-green-600'}`}>
-                       Total Weight: {settings.assessmentWeights.exercises + settings.assessmentWeights.cats + settings.assessmentWeights.terminal}% 
-                       {settings.assessmentWeights.exercises + settings.assessmentWeights.cats + settings.assessmentWeights.terminal !== 100 && " (Must equal 100%)"}
-                    </span>
-                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                 {/* CAT Marks Config */}
-                 <div className="space-y-6">
-                    <h4 className="text-xs font-black uppercase text-[#0f3460] tracking-widest">CAT Session Norms (Points)</h4>
-                    <div className="grid grid-cols-3 gap-4">
-                       {(['cat1', 'cat2', 'cat3'] as const).map((catKey, i) => (
-                          <div key={catKey} className="bg-gray-50 p-6 rounded-[2rem] text-center space-y-2">
-                             <p className="text-[9px] font-black uppercase text-gray-400">CAT {i+1}</p>
-                             <input type="number" className="w-full p-2 bg-white rounded-xl text-center font-black text-lg" value={currentSbaConfig[catKey].marks} onChange={e => updateCatConfig(catKey, 'marks', parseInt(e.target.value) || 0)} />
-                          </div>
-                       ))}
-                    </div>
-                 </div>
-
-                 {/* Terminal Sections Config */}
-                 <div className="space-y-6">
-                    <h4 className="text-xs font-black uppercase text-[#0f3460] tracking-widest">Terminal Paper Matrix (Max Score)</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="bg-gray-50 p-6 rounded-[2rem] text-center space-y-2">
-                          <p className="text-[9px] font-black uppercase text-gray-400">Section A (Objectives)</p>
-                          <input type="number" className="w-full p-2 bg-white rounded-xl text-center font-black text-lg" value={terminalConfig.sectionAMax} onChange={e => updateTerminalMax('sectionAMax', e.target.value)} />
-                       </div>
-                       <div className="bg-gray-50 p-6 rounded-[2rem] text-center space-y-2">
-                          <p className="text-[9px] font-black uppercase text-gray-400">Section B (Theory)</p>
-                          <input type="number" className="w-full p-2 bg-white rounded-xl text-center font-black text-lg" value={terminalConfig.sectionBMax} onChange={e => updateTerminalMax('sectionBMax', e.target.value)} />
-                       </div>
-                    </div>
-                 </div>
-              </div>
-
-              {/* Editable Grading System */}
-              <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 space-y-6 shadow-sm">
-                 <div className="flex justify-between items-center">
-                    <h4 className="text-xs font-black uppercase text-[#0f3460] tracking-widest">9-Point NRT Grading System Registry</h4>
-                    <span className="text-[8px] font-bold text-gray-400 uppercase">Z-Score Cut-offs define the NRT Distribution Curve</span>
-                 </div>
-                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-[10px]">
-                       <thead className="bg-[#f4f6f7] font-black uppercase text-[#0f3460]">
-                          <tr><th className="p-3">Grade</th><th className="p-3">Value</th><th className="p-3">Z-Score Cut-off</th><th className="p-3">Remark</th><th className="p-3">Color Code</th></tr>
-                       </thead>
-                       <tbody>
-                          {settings.gradingScale.map((g, idx) => (
-                             <tr key={idx} className="border-b">
-                                <td className="p-2"><input className="w-12 p-1 bg-gray-50 rounded font-black text-center" value={g.grade} onChange={e => updateScaleRow(idx, 'grade', e.target.value)} /></td>
-                                <td className="p-2"><input type="number" className="w-12 p-1 bg-gray-50 rounded text-center" value={g.value} onChange={e => updateScaleRow(idx, 'value', parseInt(e.target.value))} /></td>
-                                <td className="p-2"><input type="number" step="0.001" className="w-20 p-1 bg-gray-50 rounded text-center" value={g.zScore} onChange={e => updateScaleRow(idx, 'zScore', parseFloat(e.target.value))} /></td>
-                                <td className="p-2"><input className="w-full p-1 bg-gray-50 rounded font-bold" value={g.remark} onChange={e => updateScaleRow(idx, 'remark', e.target.value)} /></td>
-                                <td className="p-2 flex items-center gap-2">
-                                   <input type="color" className="w-8 h-8 rounded border-none cursor-pointer" value={g.color} onChange={e => updateScaleRow(idx, 'color', e.target.value)} />
-                                   <span className="font-mono text-[8px] opacity-50">{g.color}</span>
-                                </td>
-                             </tr>
-                          ))}
-                       </tbody>
-                    </table>
-                 </div>
               </div>
            </div>
-        ) : hubMode === 'sba' && sbaSubTab === 'cat' ? (
+        ) : hubMode === 'sba' && sbaSubTab === 'cat' && !isMockMode ? (
            <div className="p-8 space-y-6 animate-fadeIn">
               <div className="flex justify-between items-center border-b pb-4">
                  <h3 className="text-xl font-black text-[#0f3460] uppercase">CAT Multi-Cycle Broad Sheet</h3>
@@ -259,7 +173,7 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                  <table className="w-full text-left text-[11px] border-collapse">
                     <thead className="bg-[#f4f6f7] text-[#0f3460] font-black uppercase">
                        <tr>
-                          <th className="p-4 border-b w-64" rowSpan={2}>Learner Full Name</th>
+                          <th className="p-4 border-b w-64">Learner Full Name</th>
                           {(['cat1', 'cat2', 'cat3'] as const).map((catKey, i) => (
                              <th key={catKey} className="p-4 border-b border-x border-gray-200 text-center bg-gray-50/50">
                                 <p className="text-blue-600">CAT {i+1} (/{currentSbaConfig[catKey].marks})</p>
@@ -282,7 +196,7 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                  </table>
               </div>
            </div>
-        ) : hubMode === 'sba' && sbaSubTab === 'exercises' ? (
+        ) : hubMode === 'sba' && sbaSubTab === 'exercises' && !isMockMode ? (
           <div className="p-8 space-y-6 animate-fadeIn">
               <div className="flex justify-between items-center border-b pb-4">
                  <h3 className="text-xl font-black text-[#0f3460] uppercase">Exercises & Assignments Matrix</h3>
@@ -328,19 +242,36 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                  </table>
               </div>
           </div>
-        ) : hubMode === 'finals' ? (
+        ) : hubMode === 'finals' || isMockMode ? (
           <div className="animate-fadeIn">
+            <div className="p-6 bg-blue-50 border-b border-blue-100 flex justify-between items-center no-print">
+               <div className="flex items-center gap-3">
+                  <span className="text-lg">⚙️</span>
+                  <div>
+                    <p className="text-[10px] font-black text-blue-900 uppercase">Input Normalization Active</p>
+                    <p className="text-[9px] font-bold text-blue-700 italic">
+                      {(isScience && scienceMax === 140)
+                        ? 'Science detected: Section A (40) + Section B (100) = 140. Normalizing to 100% for grading.' 
+                        : `Standard subject mapping: Section A (${activeThresholds.a}) + Section B (${activeThresholds.b}) = ${rawSum}.`}
+                    </p>
+                  </div>
+               </div>
+            </div>
             <table className="w-full text-left border-collapse">
               <thead className="bg-[#f4f6f7] text-[#0f3460] text-[10px] font-black uppercase tracking-widest border-b">
                 <tr>
-                  <th className="p-6 border-r w-64" rowSpan={2}>Learner Full Name</th>
-                  <th className="p-4 text-center border-b bg-[#cca43b]/10" colSpan={3}>Terminal Paper Sections</th>
-                  <th className="p-6" rowSpan={2}>Facilitator Remark</th>
+                  <th className="p-6 border-r w-32">ID</th>
+                  <th className="p-6 border-r">Learner Full Name</th>
+                  <th className="p-4 text-center border-b bg-[#cca43b]/10" colSpan={3}>Assessment Sections</th>
+                  <th className="p-6">Facilitator Remark</th>
                 </tr>
                 <tr className="bg-[#cca43b]/5 text-[8px]">
-                  <th className="p-3 text-center border-r">Section A (Objectives /{terminalConfig.sectionAMax})</th>
-                  <th className="p-3 text-center border-r">Section B (Theory /{terminalConfig.sectionBMax})</th>
-                  <th className="p-3 text-center border-r font-black text-[#0f3460]">Paper Total (/100)</th>
+                  <th className="border-r"></th>
+                  <th className="border-r"></th>
+                  <th className="p-3 text-center border-r">Section A (Objectives /{activeThresholds.a})</th>
+                  <th className="p-3 text-center border-r">Section B (Theory /{activeThresholds.b})</th>
+                  <th className="p-3 text-center border-r font-black text-[#0f3460]">Normalized Total (/100)</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -349,17 +280,21 @@ const ScoreEntry: React.FC<Props> = ({ students, onUpdate, onSave, settings, onS
                     sectionA: 0, sectionB: 0, total: 0, 
                     mockObj: 0, mockTheory: 0, facilitatorRemark: '' 
                   };
+                  const rawTotal = (d.mockObj || 0) + (d.mockTheory || 0);
+                  const normalizedTotal = Math.round((rawTotal / rawSum) * 100);
+                  
                   return (
                     <tr key={s.id} className="border-b bg-white hover:bg-yellow-50/10 transition-colors">
+                      <td className="p-6 font-mono text-gray-400 border-r">{s.serialId}</td>
                       <td className="p-6 font-black text-[#0f3460] uppercase text-xs border-r">{s.firstName} {s.surname}</td>
                       <td className="p-4 text-center border-r">
-                         <input type="number" max={terminalConfig.sectionAMax} className="w-16 p-2 bg-gray-50 rounded-lg text-center font-bold text-[#0f3460] outline-none" value={d.mockObj || 0} onChange={e => handleScoreChange(s.id, 'mockObj', e.target.value)} />
+                         <input type="number" max={activeThresholds.a} className="w-16 p-2 bg-gray-50 rounded-lg text-center font-bold text-[#0f3460] outline-none" value={d.mockObj || 0} onChange={e => handleScoreChange(s.id, 'mockObj', e.target.value)} />
                       </td>
                       <td className="p-4 text-center border-r">
-                         <input type="number" max={terminalConfig.sectionBMax} className="w-16 p-2 bg-gray-50 rounded-lg text-center font-bold text-[#0f3460] outline-none" value={d.mockTheory || 0} onChange={e => handleScoreChange(s.id, 'mockTheory', e.target.value)} />
+                         <input type="number" max={activeThresholds.b} className="w-16 p-2 bg-gray-50 rounded-lg text-center font-bold text-[#0f3460] outline-none" value={d.mockTheory || 0} onChange={e => handleScoreChange(s.id, 'mockTheory', e.target.value)} />
                       </td>
                       <td className="p-4 text-center border-r font-black text-[#cca43b] text-sm bg-[#cca43b]/5">
-                         {((d.mockObj || 0) + (d.mockTheory || 0))}
+                         {normalizedTotal}
                       </td>
                       <td className="p-6">
                          <textarea className="w-full bg-transparent p-2 border-b border-gray-100 text-[10px] italic h-12 outline-none focus:border-[#cca43b]" value={d.facilitatorRemark} onChange={e => handleScoreChange(s.id, 'facilitatorRemark', e.target.value)} placeholder="Log observation..." />

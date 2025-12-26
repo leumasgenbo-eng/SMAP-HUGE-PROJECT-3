@@ -151,22 +151,14 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2 mb-4">
-           <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex flex-col items-center">
-              <span className="text-[8px] font-black text-gray-400 uppercase">Exam Start</span>
-              <EditableField value={settings.examStart} onSave={(v) => onSettingsChange({...settings, examStart: v})} className="font-bold text-[10px]" />
+        <div className="grid grid-cols-2 gap-4 mb-4">
+           <div className="bg-[#cca43b]/10 p-4 rounded-xl border-2 border-[#cca43b]/20 flex flex-col items-center justify-center">
+              <span className="text-[10px] font-black text-[#cca43b] uppercase tracking-widest mb-1">Next Term Reopening</span>
+              <EditableField value={settings.reopeningDate} onSave={(v) => onSettingsChange({...settings, reopeningDate: v})} className="font-black text-lg text-[#0f3460]" />
            </div>
-           <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex flex-col items-center">
-              <span className="text-[8px] font-black text-gray-400 uppercase">Vacation</span>
-              <EditableField value={settings.examEnd} onSave={(v) => onSettingsChange({...settings, examEnd: v})} className="font-bold text-[10px]" />
-           </div>
-           <div className="bg-[#cca43b]/10 p-2 rounded-lg border border-[#cca43b]/20 flex flex-col items-center">
-              <span className="text-[8px] font-black text-[#cca43b] uppercase">Reopening</span>
-              <EditableField value={settings.reopeningDate} onSave={(v) => onSettingsChange({...settings, reopeningDate: v})} className="font-bold text-[10px] text-[#0f3460]" />
-           </div>
-           <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex flex-col items-center">
-              <span className="text-[8px] font-black text-gray-400 uppercase">Attendance</span>
-              <span className="font-bold text-[10px]">{pupil.attendance} / {settings.totalAttendance}</span>
+           <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-100 flex flex-col items-center justify-center">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Attendance Record</span>
+              <span className="font-black text-lg text-[#0f3460]">{pupil.attendance} / {settings.totalAttendance} <span className="text-[10px] font-bold text-gray-400 ml-1">DAYS</span></span>
            </div>
         </div>
 

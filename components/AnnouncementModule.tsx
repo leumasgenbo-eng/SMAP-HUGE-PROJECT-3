@@ -42,8 +42,8 @@ const AnnouncementModule: React.FC<Props> = ({ settings, onSettingsChange, notif
       
       parentPool?.forEach((s: Student) => {
         list.push({ 
-          name: s.father.name || s.mother.name || 'Parent', 
-          contact: s.father.contact || s.mother.contact || 'N/A', 
+          name: s.father?.name || s.mother?.name || 'Parent', 
+          contact: s.father?.contact || s.mother?.contact || 'N/A', 
           type: `Parent (${s.currentClass})` 
         });
       });

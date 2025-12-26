@@ -19,6 +19,7 @@ import PupilManagement from './components/PupilManagement';
 import StaffManagement from './components/StaffManagement';
 import DaycareTimeTable from './components/DaycareTimeTable';
 import ExaminationDesk from './components/ExaminationDesk';
+import MockExaminationDesk from './components/MockExaminationDesk';
 import ObservationDesk from './components/ObservationDesk';
 import AssessmentDesk from './components/AssessmentDesk';
 import PaymentPoint from './components/PaymentPoint';
@@ -126,6 +127,7 @@ const App: React.FC = () => {
       activeIndicators: Object.values(DAYCARE_ACTIVITY_GROUPS).flat(),
       sbaConfigs: {},
       sbaMarksLocked: false,
+      globalConfigsLocked: false,
       materialRequests: [],
       classroomInventories: [],
       staffInvitations: [],
@@ -135,7 +137,9 @@ const App: React.FC = () => {
         classBills: {},
         receiptMessage: '"Thanks for using our services"',
         taxConfig: { vatRate: 15, nhilRate: 2.5, getLevyRate: 2.5, covidLevyRate: 1, isTaxEnabled: false }
-      }
+      },
+      scienceThreshold: 140,
+      distributionModel: 'Auto'
     };
     return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
   });
@@ -174,6 +178,15 @@ const App: React.FC = () => {
     'Academic Calendar', 'Pupil Management', 'Academic Reports', 'Announcements', 'Payment Point', 'Staff Management', 'Class Time Table', 
     'Examination', 'Assessment', 'Logistics & Materials', 'Lesson Assessment Desk', 'Admin Dashboard'
   ].filter(m => settings.modulePermissions[m] !== false);
+
+  if (activeClass === 'Basic 9' && settings.modulePermissions['Mock Examination'] !== false) {
+    const examIdx = modules.indexOf('Examination');
+    if (examIdx !== -1) {
+      modules.splice(examIdx + 1, 0, 'Mock Examination');
+    } else {
+      modules.push('Mock Examination');
+    }
+  }
 
   return (
     <div className="flex flex-col h-screen bg-[#f4f6f7] overflow-hidden font-sans">
@@ -264,6 +277,17 @@ const App: React.FC = () => {
                   settings={settings} 
                   onSettingsChange={setSettings} 
                   department={activeTab} 
+                  activeClass={activeClass} 
+                  students={classSpecificStudents}
+                  onStudentsUpdate={(updated) => setStudents(prev => [...prev.filter(s => s.currentClass !== activeClass || s.status !== 'Admitted'), ...updated])}
+                  onSave={handleSave}
+                  subjectList={subjectList}
+                  notify={notify} 
+                />
+              ) : activeModule === 'Mock Examination' ? (
+                <MockExaminationDesk 
+                  settings={settings} 
+                  onSettingsChange={setSettings} 
                   activeClass={activeClass} 
                   students={classSpecificStudents}
                   onStudentsUpdate={(updated) => setStudents(prev => [...prev.filter(s => s.currentClass !== activeClass || s.status !== 'Admitted'), ...updated])}

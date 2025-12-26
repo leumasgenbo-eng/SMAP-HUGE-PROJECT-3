@@ -408,9 +408,12 @@ export interface GlobalSettings {
   staffQueries?: StaffQuery[];
   sbaConfigs: Record<string, Record<string, SBAConfig>>;
   sbaMarksLocked: boolean;
+  globalConfigsLocked: boolean;
   reportTitle?: string;
   reportFooterText?: string;
   financeConfig: FinanceConfig;
+  scienceThreshold: number;
+  distributionModel: 'Auto' | 'Normal' | 'T-Dist';
 }
 
 export interface Pupil {
@@ -573,10 +576,13 @@ export interface ExamTimeTableSlot {
   id: string;
   date: string;
   time: string;
+  startTime?: string;
+  endTime?: string;
   subject: string;
   venue: string;
   duration: string;
   isBreak: boolean;
+  invigilatorName?: string;
 }
 
 export interface ObservationScheduleSlot {

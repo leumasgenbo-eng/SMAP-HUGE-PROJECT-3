@@ -45,14 +45,10 @@ const MasterBoard: React.FC<Props> = ({ pupils, settings, onSettingsChange }) =>
         <p className="text-[10px] font-black text-[#cca43b] uppercase mt-1 tracking-widest italic">Institutional Broad Sheet Analysis</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-8 mb-8 no-print bg-gray-50 p-8 rounded-[2.5rem] border border-gray-100">
+      <div className="max-w-xl mx-auto mb-8 no-print bg-gray-50 p-8 rounded-[2.5rem] border border-gray-100 text-center">
         <div className="space-y-2">
-          <label className="text-[9px] font-black text-gray-400 uppercase px-2 tracking-widest">Exam Start Window</label>
-          <input type="date" className="block w-full border-none bg-white shadow-inner p-4 rounded-2xl font-bold" value={settings.examStart} onChange={e => onSettingsChange({...settings, examStart: e.target.value})} />
-        </div>
-        <div className="space-y-2">
-          <label className="text-[9px] font-black text-gray-400 uppercase px-2 tracking-widest">Grading Finalization</label>
-          <input type="date" className="block w-full border-none bg-white shadow-inner p-4 rounded-2xl font-bold" value={settings.examEnd} onChange={e => onSettingsChange({...settings, examEnd: e.target.value})} />
+          <label className="text-[10px] font-black text-[#cca43b] uppercase px-2 tracking-[0.2em]">Next Term Reopening Date</label>
+          <input type="date" className="block w-full border-none bg-white shadow-inner p-4 rounded-2xl font-black text-[#0f3460] text-center text-lg" value={settings.reopeningDate} onChange={e => onSettingsChange({...settings, reopeningDate: e.target.value})} />
         </div>
       </div>
 
@@ -86,8 +82,8 @@ const MasterBoard: React.FC<Props> = ({ pupils, settings, onSettingsChange }) =>
               {SUBJECT_ORDER.map(subj => {
                 const s = pupil.scores[subj] || 0;
                 const subjStats = stats.find(st => st.name === subj)!;
-                // Pass scale and remarks from settings to resolve argument error and ensure correct grading
-                const gradeData = getNRTGrade(s, subjStats.mean, subjStats.stdDev, settings.gradingScale, settings.gradingSystemRemarks);
+                // Fix: Updated call to getNRTGrade with required settings and pupils.length (classSize) arguments
+                const gradeData = getNRTGrade(s, subjStats.mean, subjStats.stdDev, settings.gradingScale, settings, pupils.length);
                 return (
                   <React.Fragment key={subj}>
                     <td className={`p-1 border border-black text-center font-bold ${s < 50 ? 'text-red-600' : 'text-green-700'}`}>{s}</td>

@@ -151,11 +151,17 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-6 text-[11px] font-bold border-b pb-4">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6 text-[11px] font-bold border-b pb-6">
           <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase w-24">Name:</span><span className="flex-1 border-b border-black uppercase text-sm font-black">{pupil.name}</span></div>
-          <div className="flex gap-2 items-baseline font-black"><span className="text-gray-400 uppercase w-24">Term:</span><span className="flex-1 border-b border-black text-center">{settings.currentTerm}</span></div>
+          <div className="flex gap-2 items-baseline font-black"><span className="text-gray-400 uppercase w-24">Cycle:</span><span className="flex-1 border-b border-black text-center">{settings.academicYear} • Term {settings.currentTerm}</span></div>
           <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase w-24">Class:</span><span className="flex-1 border-b border-black text-center">{activeClass}</span></div>
           <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase w-24">Attendance:</span><span className="flex-1 border-b border-black text-center">{pupil.attendance} / {settings.totalAttendance}</span></div>
+          <div className="col-span-2 flex gap-2 items-baseline bg-[#cca43b]/5 p-2 rounded-lg">
+            <span className="text-[#cca43b] uppercase w-48 font-black">Next Term Reopening:</span>
+            <span className="flex-1 border-b border-[#cca43b]/30 text-center font-black text-[#0f3460]">
+              <EditableField value={settings.reopeningDate} onSave={v => onSettingsChange({...settings, reopeningDate: v})} />
+            </span>
+          </div>
         </div>
 
         <div className="mb-6">

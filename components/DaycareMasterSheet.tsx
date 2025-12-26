@@ -17,7 +17,7 @@ interface Props {
 
 const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsChange, subjectList, activeClass, department }) => {
   const admittedStudents = useMemo(() => students.filter(s => s.status === 'Admitted' && s.currentClass === activeClass), [students, activeClass]);
-  const isDaycare = department === 'D&N';
+  const isDaycare = department === 'D&N' || department === 'KG';
 
   // Group Summary Logic: Define labels based on constants
   const activityGroups = Object.keys(DAYCARE_ACTIVITY_GROUPS);
@@ -53,31 +53,35 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
         return { subj, exAvg, catAvg, examScore, weightedTotal };
       });
 
-      // 2. Calculate Group Summaries (Only for Daycare)
+      // 2. Calculate Group Summaries (Developmental Milestones)
       const groupAverages: Record<string, number> = {};
-      if (isDaycare) {
-        activityGroups.forEach(group => {
-          const indicators = DAYCARE_ACTIVITY_GROUPS[group as keyof typeof DAYCARE_ACTIVITY_GROUPS] || [];
-          let total = 0;
-          let count = 0;
-          indicators.forEach(ind => {
-            const val = s.scoreDetails?.[ind]?.sectionA || 0;
-            if (val > 0) {
-              total += val;
+      activityGroups.forEach(group => {
+        const indicators = DAYCARE_ACTIVITY_GROUPS[group as keyof typeof DAYCARE_ACTIVITY_GROUPS] || [];
+        let total = 0;
+        let count = 0;
+        indicators.forEach(ind => {
+          const detail = s.scoreDetails?.[ind];
+          if (detail?.dailyScores) {
+            const vals = Object.values(detail.dailyScores).map(Number);
+            if (vals.length > 0) {
+              total += vals.reduce((a, b) => a + b, 0) / vals.length;
               count++;
             }
-          });
-          // Scale 1-3 to 100% for index calculation
-          groupAverages[group] = count > 0 ? ((total / count) / 3) * 100 : 0;
+          }
         });
-      }
+        // Scale 1-3 to 100% for index calculation
+        groupAverages[group] = count > 0 ? ((total / count) / 3) * 100 : 0;
+      });
 
-      const academicAvg = subjectMetrics.reduce((a, b) => a + b.weightedTotal, 0) / (subjectList.length || 1);
-      const developmentalAvg = isDaycare 
-        ? Object.values(groupAverages).filter(v => v > 0).reduce((a, b) => a + b, 0) / (activityGroups.length || 1)
+      const academicAvg = subjectMetrics.length > 0 
+        ? subjectMetrics.reduce((a, b) => a + b.weightedTotal, 0) / subjectMetrics.length
+        : 0;
+        
+      const developmentalAvg = activityGroups.length > 0
+        ? Object.values(groupAverages).filter(v => v > 0).reduce((a, b) => a + b, 0) / activityGroups.length
         : 0;
 
-      const masterIndex = isDaycare ? (academicAvg + developmentalAvg) / 2 : academicAvg;
+      const masterIndex = (academicAvg + developmentalAvg) / 2;
 
       return {
         id: s.id,
@@ -87,7 +91,7 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
         masterIndex
       };
     });
-  }, [admittedStudents, subjectList, settings, isDaycare, activityGroups]);
+  }, [admittedStudents, subjectList, settings, activityGroups]);
 
   const stats = useMemo(() => {
     const indices = processedData.map(d => d.masterIndex);
@@ -95,8 +99,8 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
   }, [processedData]);
 
   return (
-    <div className="bg-white p-6 md:p-12 shadow-2xl border border-gray-100 min-w-max animate-fadeIn overflow-x-auto">
-      {/* Enhanced Editable Header for Master Sheet */}
+    <div className="bg-white p-4 md:p-12 shadow-2xl border border-gray-100 min-w-max animate-fadeIn overflow-x-auto">
+      {/* Comprehensive Editable Branding Header */}
       <div className="text-center mb-12 border-b-4 border-double border-[#0f3460] pb-8 flex flex-col items-center">
         <div className="flex items-center gap-6 mb-6">
           <div className="w-24 h-24 bg-gray-50 rounded-2xl border-2 border-gray-100 flex items-center justify-center overflow-hidden group relative">
@@ -128,7 +132,7 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
           </div>
         </div>
         
-        <div className="flex justify-center gap-8 text-xs font-bold text-gray-500 uppercase tracking-widest pt-4 border-t border-gray-100 w-full max-w-5xl">
+        <div className="flex justify-center gap-8 text-xs font-bold text-gray-400 uppercase tracking-widest pt-4 border-t border-gray-100 w-full max-w-5xl">
           <div className="flex items-center gap-2">
             <span className="text-[#cca43b] text-[10px]">📍</span>
             <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
@@ -144,8 +148,8 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
         </div>
 
         <div className="mt-8 space-y-2">
-          <h2 className="text-2xl font-bold text-[#0f3460] uppercase tracking-widest">
-            {isDaycare ? "DAYCARE & NURSERY" : "PRESCHOOL"} MASTER BROAD SHEET
+          <h2 className="text-2xl font-black text-[#0f3460] uppercase tracking-widest border-b-2 border-black/5 pb-1">
+            {department} DEVELOPMENTAL MASTER BROAD SHEET
           </h2>
           <p className="text-lg font-black text-[#cca43b] uppercase tracking-[0.2em]">CLASS: {activeClass}</p>
         </div>
@@ -163,24 +167,22 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
             <th className="p-4 border border-black text-center" rowSpan={3}>NO.</th>
             <th className="p-4 border border-black text-left min-w-[220px]" rowSpan={3}>LEARNER FULL NAME</th>
             {subjectList.map(subj => (
-              <th key={subj} className="p-2 border border-black text-center bg-blue-50/50" colSpan={4}>{subj}</th>
+              <th key={subj} className="p-2 border border-black text-center bg-blue-50/30" colSpan={4}>{subj}</th>
             ))}
-            {isDaycare && (
-              <th className="p-2 border border-black text-center bg-green-50/50" colSpan={activityGroups.length}>DEVELOPMENTAL GROUP SUMMARY</th>
-            )}
+            <th className="p-2 border border-black text-center bg-green-50/30" colSpan={activityGroups.length}>DEVELOPMENTAL GROUP SUMMARY (AVGS)</th>
             <th className="p-4 border border-black text-center bg-yellow-50" rowSpan={3}>FINAL<br/>INDEX</th>
             <th className="p-4 border border-black text-center bg-yellow-50" rowSpan={3}>NRT<br/>RATING</th>
           </tr>
-          <tr className="bg-gray-50">
+          <tr className="bg-gray-50 text-[7px]">
             {subjectList.map(subj => (
               <React.Fragment key={subj}>
-                <th className="p-1 border border-black text-[7px]">EXER</th>
-                <th className="p-1 border border-black text-[7px]">CAT</th>
-                <th className="p-1 border border-black text-[7px]">EXAM</th>
-                <th className="p-1 border border-black text-[8px] bg-blue-100/50">TOT</th>
+                <th className="p-1 border border-black">EXER</th>
+                <th className="p-1 border border-black">CAT</th>
+                <th className="p-1 border border-black">EXAM</th>
+                <th className="p-1 border border-black bg-blue-100/50">TOT</th>
               </React.Fragment>
             ))}
-            {isDaycare && activityGroups.map(group => (
+            {activityGroups.map(group => (
               <th key={group} className="p-1 border border-black h-40 align-bottom min-w-[35px] bg-green-50/20">
                 <span className="[writing-mode:vertical-rl] rotate-180 text-[7px] font-black uppercase pb-2">{group}</span>
               </th>
@@ -195,12 +197,14 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
                  <th className="border border-black bg-blue-100/30">(100%)</th>
                </React.Fragment>
              ))}
-             {isDaycare && activityGroups.map(g => <th key={g} className="border border-black">Avg</th>)}
+             {activityGroups.map(g => <th key={g} className="border border-black">--</th>)}
           </tr>
         </thead>
         <tbody>
-          {processedData.map((data, idx) => {
-            const rating = getDevelopmentalRating(data.masterIndex, stats.mean, stats.stdDev, 9, settings.gradingScale);
+          {processedData.length === 0 ? (
+            <tr><td colSpan={subjectList.length * 4 + activityGroups.length + 4} className="p-32 text-center font-black uppercase text-gray-300 italic">No Enrolled Pupils Found for {activeClass}</td></tr>
+          ) : processedData.map((data, idx) => {
+            const rating = getDevelopmentalRating(data.masterIndex, stats.mean, stats.stdDev, 3, settings.gradingScale);
             return (
               <tr key={data.id} className="hover:bg-yellow-50 transition border-b group">
                 <td className="p-2 border border-black text-center font-black">{idx + 1}</td>
@@ -213,7 +217,7 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
                     <td className="p-1 border border-black text-center font-black text-blue-800 bg-blue-50/30">{m.weightedTotal}</td>
                   </React.Fragment>
                 ))}
-                {isDaycare && activityGroups.map(group => {
+                {activityGroups.map(group => {
                    const gScore = data.groupAverages[group];
                    return (
                      <td key={group} className="p-1 border border-black text-center font-bold text-green-700">
@@ -246,9 +250,9 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
                    </React.Fragment>
                  );
               })}
-              {isDaycare && activityGroups.map(g => (
+              {activityGroups.map(g => (
                 <td key={g} className="p-1 border border-black text-center text-[7px]">
-                   {(processedData.reduce((a,b)=>a+b.groupAverages[g], 0) / (processedData.length || 1)).toFixed(0)}%
+                   {(processedData.reduce((a,b)=>a + (b.groupAverages[g] || 0), 0) / (processedData.length || 1)).toFixed(0)}%
                 </td>
               ))}
               <td className="p-1 border border-black text-center bg-yellow-200" colSpan={2}>{stats.mean.toFixed(1)}%</td>
@@ -267,10 +271,10 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
             </div>
          </div>
          <div className="space-y-4">
-            <h4 className="text-xs font-black uppercase text-[#0f3460] tracking-widest border-b-2 border-[#cca43b] w-fit pb-1">Master Index Calculation</h4>
+            <h4 className="text-xs font-black uppercase text-[#0f3460] tracking-widest border-b-2 border-[#cca43b] w-fit pb-1">Calculation Hierarchy</h4>
             <p className="text-[9px] text-gray-400 leading-relaxed italic">
                The Master Index is a composite of Academic weighted scores (50%) and Developmental Indicator performance (50%). 
-               Ratings are mapped against the institutional NRT curve.
+               Ratings are mapped against the institutional NRT curve for Term {settings.currentTerm}.
             </p>
          </div>
       </div>
@@ -278,7 +282,11 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
       <div className="hidden print:flex justify-end mt-20">
         <div className="text-center w-80">
           <div className="h-16 flex items-end justify-center pb-2 italic font-serif text-3xl border-b-2 border-black text-[#0f3460]">
-             {settings.headteacherName}
+             <EditableField 
+                value={settings.headteacherName} 
+                onSave={v => onSettingsChange({...settings, headteacherName: v})} 
+                className="text-center"
+             />
           </div>
           <div className="pt-4">
             <p className="font-black uppercase text-sm text-[#0f3460] tracking-tighter">Institutional Authorization</p>

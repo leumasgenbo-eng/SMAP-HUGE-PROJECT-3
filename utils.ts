@@ -47,14 +47,35 @@ export function calculateStats(scores: number[]) {
   return { mean, stdDev };
 }
 
-export function getNRTGrade(score: number, mean: number, stdDev: number, scale: GradingScaleEntry[], customRemarks?: Record<string, string>) {
+/**
+ * Normal Distribution vs T-Distribution Logic
+ * Use T-Dist when N < 30 to account for small sample bias.
+ */
+export function getNRTGrade(score: number, mean: number, stdDev: number, scale: GradingScaleEntry[], settings: GlobalSettings, classSize: number) {
   if (stdDev <= 0) {
     const defaultGrade = scale[Math.floor(scale.length / 2)] || scale[0];
-    return { ...defaultGrade, remark: customRemarks?.[defaultGrade.grade] || defaultGrade.remark };
+    return { ...defaultGrade, remark: settings.gradingSystemRemarks?.[defaultGrade.grade] || defaultGrade.remark };
   }
-  const z = (score - mean) / stdDev;
+
+  const model = settings.distributionModel || 'Auto';
+  const useTDist = model === 'T-Dist' || (model === 'Auto' && classSize < 30);
+  
+  // Standard Normal Z-score
+  let z = (score - mean) / stdDev;
+
+  /**
+   * For T-Distribution adjustment in grading:
+   * As N decreases, the tails of the T-distribution get "heavier" (wider).
+   * To maintain parity with Z-thresholds, we adjust the effective Z-score for comparisons.
+   * Simple heuristic adjustment for small N: inflate standard deviation impact.
+   */
+  if (useTDist && classSize > 1) {
+    const correctionFactor = Math.sqrt(classSize / (classSize - 1));
+    z = z / correctionFactor;
+  }
+
   const gradeData = scale.find(s => z >= s.zScore) || scale[scale.length - 1];
-  return { ...gradeData, remark: customRemarks?.[gradeData.grade] || gradeData.remark };
+  return { ...gradeData, remark: settings.gradingSystemRemarks?.[gradeData.grade] || gradeData.remark };
 }
 
 export function calculateWeightedScore(student: Student, subject: string, settings: GlobalSettings): number {
@@ -81,11 +102,19 @@ export function calculateWeightedScore(student: Student, subject: string, settin
   // 3. Terminal Score (From Section A + Section B)
   const scoreDetails = student.scoreDetails?.[subject];
   const tConfig = settings.terminalConfigs[student.currentClass] || { sectionAMax: 30, sectionBMax: 70 };
+  
+  // Normalization logic for Science vs Standard
+  const isScience = subject.toLowerCase().includes('science');
+  const scienceThreshold = settings.scienceThreshold || 140;
+  const maxA = (isScience && scienceThreshold === 140) ? 40 : tConfig.sectionAMax;
+  const maxB = (isScience && scienceThreshold === 140) ? 100 : tConfig.sectionBMax;
+  const terminalMaxRaw = maxA + maxB;
+
   let weightedTerminal = 0;
   if (scoreDetails) {
     const rawTerminal = (scoreDetails.mockObj || 0) + (scoreDetails.mockTheory || 0);
-    const terminalMax = tConfig.sectionAMax + tConfig.sectionBMax;
-    weightedTerminal = (rawTerminal / terminalMax) * 100 * (weights.terminal / 100);
+    // This normalizes any raw sum back to a 100-point scale before applying weighting
+    weightedTerminal = (rawTerminal / terminalMaxRaw) * 100 * (weights.terminal / 100);
   }
 
   return Math.round(weightedExercises + weightedCats + weightedTerminal);
@@ -93,6 +122,7 @@ export function calculateWeightedScore(student: Student, subject: string, settin
 
 export function processStudentData(students: Student[], settings: GlobalSettings, subjectList: string[]): Pupil[] {
   const scale = settings.gradingScale || [];
+  const classSize = students.length;
   
   // Stats for Subjects (Using Calculated Weighted Scores)
   const stats = subjectList.map(subj => {
@@ -103,9 +133,9 @@ export function processStudentData(students: Student[], settings: GlobalSettings
   const pupils: Pupil[] = students.map((s, idx) => {
     const computedScores = subjectList.map(subj => {
       const weightedTotal = calculateWeightedScore(s, subj, settings);
-      const details = s.scoreDetails?.[subj] || { total: 0, facilitatorRemark: '' };
+      const details = s.scoreDetails?.[subj] || { total: 0, facilitatorRemark: '', mockObj: 0, mockTheory: 0 };
       const stat = stats.find(st => st.name === subj)!;
-      const gradeObj = getNRTGrade(weightedTotal, stat.mean, stat.stdDev, scale, settings.gradingSystemRemarks);
+      const gradeObj = getNRTGrade(weightedTotal, stat.mean, stat.stdDev, scale, settings, classSize);
       
       return {
         name: subj,
@@ -116,7 +146,10 @@ export function processStudentData(students: Student[], settings: GlobalSettings
         isCore: CORE_SUBJECTS.includes(subj),
         classAverage: stat.mean,
         facilitator: settings.facilitatorMapping?.[subj] || "N/A",
-        remark: details.facilitatorRemark || generateSubjectRemark(weightedTotal)
+        remark: details.facilitatorRemark || generateSubjectRemark(weightedTotal),
+        // Add raw scores for broadsheet views
+        sectionA: details.mockObj || 0,
+        sectionB: details.mockTheory || 0
       };
     }).sort((a, b) => b.score - a.score);
 
@@ -177,13 +210,14 @@ export function calculateFacilitatorStats(students: Student[], settings: GlobalS
   const scores = students.map(s => calculateWeightedScore(s, subject, settings));
   const { mean, stdDev } = calculateStats(scores);
   const scale = settings.gradingScale || [];
+  const classSize = students.length;
   
   const distribution: Record<string, number> = {};
   scale.forEach(s => distribution[s.grade] = 0);
 
   let totalWeightedValue = 0;
   scores.forEach(score => {
-    const gradeObj = getNRTGrade(score, mean, stdDev, scale);
+    const gradeObj = getNRTGrade(score, mean, stdDev, scale, settings, classSize);
     distribution[gradeObj.grade]++;
     totalWeightedValue += gradeObj.value;
   });
@@ -206,9 +240,6 @@ export function getObservationRating(points: number, config: EarlyChildhoodGradi
   return range || { label: '?', min: 0, max: 0, color: '#ccc', remark: 'Unknown' };
 }
 
-/**
- * Fix: Added getNextClass utility to handle academic progression.
- */
 export function getNextClass(currentClass: string): string {
   const classes = [
     'Creche', 'N1', 'N2', 'KG1', 'KG2',
@@ -220,9 +251,6 @@ export function getNextClass(currentClass: string): string {
   return classes[index + 1];
 }
 
-/**
- * Fix: Exported NRT_SCALE for use in facilitator performance analytics.
- */
 export const NRT_SCALE: GradingScaleEntry[] = [
   { grade: "A1", value: 1, zScore: 1.645, remark: "Excellent", color: "#2e8b57" },
   { grade: "B2", value: 2, zScore: 1.036, remark: "Very Good", color: "#3a9d6a" },
