@@ -24,6 +24,8 @@ import AssessmentDesk from './components/AssessmentDesk';
 import PaymentPoint from './components/PaymentPoint';
 import LessonAssessmentDesk from './components/LessonAssessmentDesk';
 import MaterialsLogistics from './components/MaterialsLogistics';
+import AnnouncementModule from './components/AnnouncementModule';
+import ReportModule from './components/ReportModule';
 import { GlobalSettings, Student } from './types';
 import { processStudentData } from './utils';
 
@@ -72,8 +74,10 @@ const App: React.FC = () => {
       transactionAuditLogs: [],
       facilitatorComplianceLogs: [],
       lessonAssessments: [],
+      announcements: [],
       staffAttendance: {},
       observationSchedule: {},
+      subjectProfiles: {},
       activeDevelopmentIndicators: [],
       customSubjects: [],
       disabledSubjects: [],
@@ -119,15 +123,13 @@ const App: React.FC = () => {
       terminalConfigs: {},
       facilitatorMapping: {},
       submittedSubjects: [],
-      activeIndicators: [
-        "Vocabulary building", "Listening to stories", "Pre-writing skills", "Phonics awareness", "Letter recognition",
-        "Counting 1-20", "Shape recognition", "Color sorting", "Pattern making", "Basic measurement",
-        "Gross motor skills", "Fine motor skills", "Hand-eye coordination", "Balance and posture", "Personal hygiene"
-      ],
+      activeIndicators: Object.values(DAYCARE_ACTIVITY_GROUPS).flat(),
       sbaConfigs: {},
       sbaMarksLocked: false,
       materialRequests: [],
       classroomInventories: [],
+      staffInvitations: [],
+      staffQueries: [],
       financeConfig: {
         categories: ['School Fees', 'Lunch Fee', 'Tuition', 'Uniform/Wear', 'Books/Stationery'],
         classBills: {},
@@ -169,7 +171,7 @@ const App: React.FC = () => {
   const classSpecificStudents = students.filter(s => s.status === 'Admitted' && s.currentClass === activeClass);
 
   const modules = [
-    'Academic Calendar', 'Pupil Management', 'Payment Point', 'Staff Management', 'Class Time Table', 
+    'Academic Calendar', 'Pupil Management', 'Academic Reports', 'Announcements', 'Payment Point', 'Staff Management', 'Class Time Table', 
     'Examination', 'Assessment', 'Logistics & Materials', 'Lesson Assessment Desk', 'Admin Dashboard'
   ].filter(m => settings.modulePermissions[m] !== false);
 
@@ -235,6 +237,18 @@ const App: React.FC = () => {
                 <AcademicCalendar settings={settings} onSettingsChange={setSettings} notify={notify} />
               ) : activeModule === 'Pupil Management' ? (
                 <PupilManagement students={students} onStudentsUpdate={setStudents} settings={settings} onSettingsChange={setSettings} notify={notify} />
+              ) : activeModule === 'Academic Reports' ? (
+                <ReportModule 
+                  students={classSpecificStudents} 
+                  settings={settings} 
+                  onSettingsChange={setSettings} 
+                  activeClass={activeClass} 
+                  department={activeTab} 
+                  onStudentUpdate={handleStudentUpdate}
+                  notify={notify}
+                />
+              ) : activeModule === 'Announcements' ? (
+                <AnnouncementModule settings={settings} onSettingsChange={setSettings} notify={notify} students={students} />
               ) : activeModule === 'Payment Point' ? (
                 <PaymentPoint students={students} onStudentsUpdate={setStudents} settings={settings} onSettingsChange={setSettings} notify={notify} />
               ) : activeModule === 'Staff Management' ? (

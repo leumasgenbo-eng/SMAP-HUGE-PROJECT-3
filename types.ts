@@ -1,4 +1,40 @@
 
+export interface Announcement {
+  id: string;
+  title: string;
+  category: 'Urgent' | 'General' | 'Academic' | 'Financial' | 'Event';
+  content: string;
+  dateCreated: string;
+  targetAudience: 'Parents' | 'Staff' | 'All' | 'Specific Class';
+  targetClass?: string;
+  status: 'Draft' | 'Sent' | 'Scheduled';
+  platforms: ('WhatsApp' | 'Email' | 'System' | 'SMS')[];
+  authorName: string;
+}
+
+export interface StaffInvitation {
+  id: string;
+  staffId: string;
+  staffName: string;
+  dateSent: string;
+  targetDate: string;
+  subject: string;
+  status: 'Pending' | 'Rescheduled' | 'Attended' | 'Declined';
+  reasonForDecline?: string;
+  isJustified?: boolean;
+}
+
+export interface StaffQuery {
+  id: string;
+  staffId: string;
+  staffName: string;
+  dateIssued: string;
+  subject: string;
+  violationType: 'Non-attendance' | 'Substandard Performance' | 'Late Submission';
+  responseStatus: 'Awaiting' | 'Received' | 'Resolved';
+  content: string;
+}
+
 export interface GradingScaleEntry {
   grade: string;
   value: number;
@@ -228,6 +264,13 @@ export interface FinanceConfig {
   taxConfig: TaxConfig;
 }
 
+export interface SubjectProfile {
+  name: string;
+  intensity: 'High' | 'Medium' | 'Low';
+  location: 'In' | 'Out' | 'Both';
+  department: string;
+}
+
 export interface Student {
   id: string;
   serialId: string;
@@ -316,12 +359,14 @@ export interface GlobalSettings {
   transactionAuditLogs: TransactionAuditLog[];
   facilitatorComplianceLogs: FacilitatorComplianceLog[];
   lessonAssessments?: LessonPlanAssessment[];
+  announcements?: Announcement[];
   staffAttendance: Record<string, Record<string, { timeIn: string; timeOut: string; status: string }>>;
   observationSchedule: Record<string, ObservationScheduleSlot[]>;
+  subjectProfiles: Record<string, SubjectProfile>;
   activeDevelopmentIndicators: string[];
   customSubjects: string[];
   disabledSubjects: string[];
-  questionBank: Record<string, Record<string, string>>;
+  questionBank: Record<string, Record<string, Record<string, string>>>;
   teacherConstraints: Record<string, string[]>; 
   subjectDemands: Record<string, Record<string, number>>;
   promotionConfig: {
@@ -359,6 +404,8 @@ export interface GlobalSettings {
   specialDisciplinaryLogs?: SpecialDisciplinaryLog[];
   materialRequests?: MaterialRequest[];
   classroomInventories?: ClassroomInventory[];
+  staffInvitations?: StaffInvitation[];
+  staffQueries?: StaffQuery[];
   sbaConfigs: Record<string, Record<string, SBAConfig>>;
   sbaMarksLocked: boolean;
   reportTitle?: string;
@@ -541,6 +588,11 @@ export interface ObservationScheduleSlot {
   observerId: string;
   pupilGroup: string[];
   activityIndicator: string;
-  // Fix: Added 'In Progress' and 'Lapsed' to resolve comparison errors in components
   status: 'Pending' | 'In Progress' | 'Completed' | 'Lapsed';
+  day?: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday';
+  startTime?: string;
+  endTime?: string;
+  locationType?: 'In' | 'Out' | 'Both';
+  activityType?: string;
+  learningArea?: string;
 }

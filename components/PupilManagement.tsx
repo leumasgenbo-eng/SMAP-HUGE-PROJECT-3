@@ -1,7 +1,7 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Student, GlobalSettings, AdmissionTestInfo } from '../types';
-import { CLASS_MAPPING } from '../constants';
+import { CLASS_MAPPING, DEPARTMENTS } from '../constants';
 import EditableField from './EditableField';
 
 interface Props {
@@ -16,6 +16,9 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
   const [activeTab, setActiveTab] = useState<'registry' | 'application' | 'assessment' | 'approval' | 'registers'>('application');
   const [activeClass, setActiveClass] = useState('Basic 1');
   const [registerType, setRegisterType] = useState<'Attendance' | 'Lunch' | 'General'>('Attendance');
+  const [activeAssessmentSet, setActiveAssessmentSet] = useState<'A' | 'B' | 'C' | 'D'>('A');
+
+  const questionUploadRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<Partial<Student>>({
     firstName: '', surname: '', others: '', dob: '', sex: 'Male', classApplyingFor: 'Basic 1',
@@ -30,6 +33,14 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
   const applicants = students.filter(s => s.status === 'Pending' || s.status === 'Scheduled' || s.status === 'Results Ready');
   const approvalPool = students.filter(s => s.status === 'Results Ready');
   const classList = enrolled.filter(s => s.currentClass === activeClass);
+
+  // Determine current department for assessment bank
+  const currentDeptId = useMemo(() => {
+    for (const [dept, classes] of Object.entries(CLASS_MAPPING)) {
+      if (classes.includes(activeClass)) return dept;
+    }
+    return 'Lower';
+  }, [activeClass]);
 
   const handleApply = () => {
     if (!form.admissionFeeReceipt || !form.firstName) {
@@ -46,7 +57,8 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
       scoreDetails: {}, attendance: {}, lunchRegister: {}, generalRegister: {},
       ledger: [], isFeesCleared: false,
       testDetails: {
-        set: 'A', serial: `TX-${Date.now().toString().slice(-4)}`,
+        set: activeAssessmentSet,
+        serial: `TX-${Date.now().toString().slice(-4)}`,
         date: '', venue: 'Main Hall', invigilator: 'Admission Officer',
         scores: { script: 0, handwriting: 0, spelling: 0, oral: 0, logic: 0 }
       }
@@ -96,10 +108,62 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
     }));
   };
 
+  // --- Assessment Question Management ---
+  const handleDownloadQuestions = () => {
+    const questions = settings.questionBank?.[currentDeptId]?.[activeAssessmentSet] || {};
+    const rows = Object.entries(questions).map(([id, text]) => [`"${id}"`, `"${text.replace(/"/g, '""')}"`]);
+    if (rows.length === 0) {
+      notify(`No questions found in Set ${activeAssessmentSet} for this department.`, "error");
+      return;
+    }
+    
+    const csvContent = ["Question ID,Content", ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `UBA_Admission_Questions_${currentDeptId}_Set_${activeAssessmentSet}.csv`;
+    link.click();
+    notify(`Set ${activeAssessmentSet} Question Paper Exported`, "success");
+  };
+
+  const handleUploadQuestions = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split('\n').filter(l => l.trim().length > 0);
+        if (lines.length < 2) throw new Error("Format error");
+
+        const updatedBank = { ...(settings.questionBank || {}) };
+        if (!updatedBank[currentDeptId]) updatedBank[currentDeptId] = {};
+        if (!updatedBank[currentDeptId][activeAssessmentSet]) updatedBank[currentDeptId][activeAssessmentSet] = {};
+
+        // Skip header
+        lines.slice(1).forEach(line => {
+          const parts = line.split(',').map(p => p.replace(/"/g, '').trim());
+          if (parts.length >= 2) {
+            updatedBank[currentDeptId][activeAssessmentSet][parts[0]] = parts[1];
+          }
+        });
+
+        onSettingsChange({ ...settings, questionBank: updatedBank });
+        notify(`Bank Refreshed: Set ${activeAssessmentSet} Questions Loaded`, "success");
+      } catch (err) {
+        notify("CSV Formatting Error. Required: ID,Content", "error");
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Dynamic Header with Editable Particulars */}
-      <div className="bg-white p-8 rounded-[3rem] shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-3 no-print">
+      <div className="bg-white p-8 rounded-[3rem] shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-4 no-print">
         <EditableField value={settings.schoolName} onSave={v => onSettingsChange({...settings, schoolName: v})} className="text-4xl font-black text-[#0f3460] uppercase tracking-tighter" />
         <EditableField value={settings.motto} onSave={v => onSettingsChange({...settings, motto: v})} className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" />
         
@@ -178,16 +242,34 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
         )}
 
         {activeTab === 'assessment' && (
-          <div className="space-y-8">
-            <div className="flex justify-between items-center border-b pb-6">
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-b pb-6">
               <div>
                 <h3 className="text-2xl font-black text-[#0f3460] uppercase">Admission Assessment Lab</h3>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">Grading Entry for Applicants Awaiting Decisions</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Grading Entry & Question Set Management</p>
               </div>
-              <div className="flex gap-4">
-                <div className="bg-orange-50 px-4 py-2 rounded-xl border border-orange-100 flex flex-col items-center">
-                  <span className="text-[8px] font-black text-orange-400 uppercase">Question Bank Status</span>
-                  <span className="text-xs font-black text-orange-700">Set A-D Loaded</span>
+              <div className="flex flex-wrap gap-4 justify-center md:justify-end items-center">
+                <div className="flex bg-gray-50 p-1.5 rounded-2xl shadow-inner no-print">
+                  {['A', 'B', 'C', 'D'].map(s => (
+                    <button 
+                      key={s} 
+                      onClick={() => setActiveAssessmentSet(s as any)} 
+                      className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeAssessmentSet === s ? 'bg-orange-500 text-white shadow-md' : 'text-gray-400'}`}
+                    >
+                      Set {s}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={handleDownloadQuestions} className="bg-blue-50 text-blue-600 px-4 py-2.5 rounded-xl font-black uppercase text-[9px] shadow-sm hover:bg-blue-600 hover:text-white transition flex items-center gap-2">
+                    <span>⬇️</span> Download Set {activeAssessmentSet}
+                  </button>
+                  <div className="relative">
+                    <input type="file" accept=".csv" className="hidden" ref={questionUploadRef} onChange={handleUploadQuestions} />
+                    <button onClick={() => questionUploadRef.current?.click()} className="bg-green-50 text-green-600 px-4 py-2.5 rounded-xl font-black uppercase text-[9px] shadow-sm hover:bg-green-600 hover:text-white transition flex items-center gap-2">
+                      <span>⬆️</span> Upload Bank
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -198,7 +280,7 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
                      <tr>
                         <th className="p-5">Applicant Name</th>
                         <th className="p-5">Target Class</th>
-                        <th className="p-5 text-center">Set</th>
+                        <th className="p-5 text-center">Active Set</th>
                         <th className="p-5 text-center">Oral (20)</th>
                         <th className="p-5 text-center">Script (40)</th>
                         <th className="p-5 text-center">Logic (20)</th>

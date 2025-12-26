@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Student, GlobalSettings, StaffRecord, FacilitatorComplianceLog } from '../types';
+import { Student, GlobalSettings, StaffRecord, FacilitatorComplianceLog, SubjectProfile } from '../types';
 import EditableField from './EditableField';
 import { getSubjectsForDepartment } from '../constants';
 
@@ -60,46 +60,61 @@ const GenericModule: React.FC<Props> = ({ department, activeClass, settings, onS
   };
 
   const smartGenerate = () => {
-    const classDemands = settings.subjectDemands?.[activeClass] || {};
+    const classDemands = settings.subjectDemands[activeClass] || {};
+    const profiles = settings.subjectProfiles || {};
     const newTable: Record<string, string[]> = {};
     days.forEach(d => newTable[d] = Array(8).fill(''));
 
-    // 1. Place Fixed Activities
+    // 1. Place Fixed Activities (Pedagogical Defaults)
     days.forEach(d => {
-      newTable[d][0] = 'Worship'; // Default Period 1 is Worship
+      newTable[d][0] = 'Worship'; // Standard Morning Pillar
       if (d === 'Friday') {
-        newTable[d][3] = 'PLC Meeting';
-        newTable[d][4] = 'Club Activity';
+        newTable[d][4] = 'PLC Meeting';
+        newTable[d][5] = 'Club Activity';
       }
     });
 
-    // 2. Extra Curricular (From Academic Calendar)
-    const calendarWeek = settings.academicCalendar[settings.currentTerm]?.[0];
-    if (calendarWeek?.extraCurricular) {
-       newTable['Thursday'][5] = calendarWeek.extraCurricular;
-       newTable['Thursday'][6] = calendarWeek.extraCurricular;
-    }
+    // 2. Prepare Subject Pools
+    const highIntensityPool: string[] = [];
+    const regularPool: string[] = [];
 
-    // 3. Distribute Subjects based on demand
-    let pool: string[] = [];
     Object.entries(classDemands).forEach(([subj, count]) => {
-      for (let i = 0; i < count; i++) pool.push(subj);
+      const profile = profiles[subj] || { intensity: 'Medium' };
+      for (let i = 0; i < count; i++) {
+        if (profile.intensity === 'High') highIntensityPool.push(subj);
+        else regularPool.push(subj);
+      }
     });
-    pool = pool.sort(() => Math.random() - 0.5);
 
-    days.forEach(d => {
-      for (let p = 0; p < 7; p++) {
-        if (newTable[d][p]) continue;
-        if (pool.length > 0) {
-          const next = pool.pop();
-          if (next) newTable[d][p] = next;
+    // Shuffle pools
+    highIntensityPool.sort(() => Math.random() - 0.5);
+    regularPool.sort(() => Math.random() - 0.5);
+
+    // 3. Cognitive Mapping (Priority Placement)
+    days.forEach(day => {
+      // Mornings L1-L3 (Best for High Intensity)
+      for (let p = 1; p <= 3; p++) {
+        if (newTable[day][p]) continue;
+        if (highIntensityPool.length > 0) {
+          newTable[day][p] = highIntensityPool.pop()!;
+        } else if (regularPool.length > 0) {
+          newTable[day][p] = regularPool.pop()!;
+        }
+      }
+      // Afternoons L4-L7
+      for (let p = 4; p <= 7; p++) {
+        if (newTable[day][p]) continue;
+        if (regularPool.length > 0) {
+          newTable[day][p] = regularPool.pop()!;
+        } else if (highIntensityPool.length > 0) {
+          newTable[day][p] = highIntensityPool.pop()!;
         }
       }
     });
 
     const currentTables = { ...(settings.classTimeTables || {}), [activeClass]: newTable };
     onSettingsChange({ ...settings, classTimeTables: currentTables });
-    notify("Draft Timetable Generated! Please adjust bottlenecks manually.", "success");
+    notify("Intelligence Engine: Balanced Morning-Intensity Schedule Synthesized!", "success");
   };
 
   const handleLogCompliance = () => {
@@ -198,6 +213,7 @@ const GenericModule: React.FC<Props> = ({ department, activeClass, settings, onS
                         const currentSubject = settings.classTimeTables[activeClass]?.[day]?.[pIdx] || '';
                         const facilitator = getFacilitatorForSubject(currentSubject);
                         const conflict = checkConflict(day, pIdx, currentSubject);
+                        const profile = settings.subjectProfiles?.[currentSubject];
                         
                         return (
                           <td key={day} className={`p-4 text-center border-x border-gray-50 ${conflict ? 'bg-red-50' : ''}`}>
@@ -216,8 +232,14 @@ const GenericModule: React.FC<Props> = ({ department, activeClass, settings, onS
                                   </optgroup>
                                 </select>
                                 {currentSubject && currentSubject !== 'Break' && (
-                                   <div className="flex flex-col items-center">
+                                   <div className="flex flex-col items-center gap-1">
                                       <span className={`text-[8px] font-black uppercase ${conflict ? 'text-red-600' : 'text-[#cca43b]'}`}>{facilitator}</span>
+                                      {profile && (
+                                        <div className="flex gap-1">
+                                          <span className={`px-1.5 py-0.5 rounded text-[6px] font-black uppercase ${profile.intensity === 'High' ? 'bg-red-100 text-red-700' : profile.intensity === 'Low' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{profile.intensity}</span>
+                                          <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[6px] font-black uppercase">{profile.location}</span>
+                                        </div>
+                                      )}
                                       {conflict && <span className="text-[7px] font-bold text-red-400 italic block">{conflict}</span>}
                                    </div>
                                 )}
@@ -238,52 +260,80 @@ const GenericModule: React.FC<Props> = ({ department, activeClass, settings, onS
                 <div className="space-y-6">
                    <div className="border-b pb-4">
                       <h3 className="text-2xl font-black text-[#0f3460] uppercase">Subject Demand Planner</h3>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Define periods per week for smart generation</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Define periods per week and review facilitator presence</p>
                    </div>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[450px] overflow-y-auto pr-4 scrollbar-hide">
-                      {subjects.map(subj => (
-                        <div key={subj} className="bg-gray-50 p-4 rounded-[2rem] border border-gray-100 flex items-center justify-between">
-                           <span className="text-[10px] font-black uppercase text-[#0f3460] w-32 truncate">{subj}</span>
-                           <div className="flex items-center gap-3">
-                              <input 
-                                type="number" 
-                                min="0" max="10"
-                                className="w-16 p-2 bg-white rounded-xl text-center font-black text-xs shadow-inner"
-                                value={settings.subjectDemands[activeClass]?.[subj] || 0}
-                                onChange={e => {
-                                   const updatedDemands = { ...(settings.subjectDemands || {}) };
-                                   if (!updatedDemands[activeClass]) updatedDemands[activeClass] = {};
-                                   updatedDemands[activeClass][subj] = parseInt(e.target.value) || 0;
-                                   onSettingsChange({ ...settings, subjectDemands: updatedDemands });
-                                }}
-                              />
-                              <span className="text-[8px] font-bold text-gray-400 uppercase">p/w</span>
-                           </div>
-                        </div>
-                      ))}
+                   <div className="grid grid-cols-1 gap-4 h-[550px] overflow-y-auto pr-4 scrollbar-hide">
+                      {subjects.map(subj => {
+                        const facilitatorName = getFacilitatorForSubject(subj);
+                        const staff = settings.staff.find(s => s.name === facilitatorName || s.id === facilitatorName || s.idNumber === facilitatorName);
+                        const availability = staff?.availableDays?.length ? staff.availableDays.join(', ') : (staff?.employmentType === 'Full Time' ? 'Full Time (Mon-Fri)' : 'Not Specified');
+                        const profile = settings.subjectProfiles?.[subj];
+
+                        return (
+                          <div key={subj} className="bg-gray-50 p-6 rounded-[2.5rem] border border-gray-100 flex items-center justify-between shadow-sm hover:shadow-md transition group">
+                             <div className="flex flex-col flex-1">
+                                <div className="flex items-center gap-2">
+                                   <span className="text-[11px] font-black uppercase text-[#0f3460] truncate">{subj}</span>
+                                   {profile && (
+                                     <span className={`px-2 py-0.5 rounded text-[6px] font-black uppercase ${profile.intensity === 'High' ? 'bg-red-50 text-red-600' : profile.intensity === 'Low' ? 'bg-green-50 text-green-600' : 'bg-yellow-50 text-yellow-600'}`}>
+                                        {profile.intensity}
+                                     </span>
+                                   )}
+                                </div>
+                                <div className="mt-2 space-y-1">
+                                   <div className="flex items-center gap-1.5">
+                                      <span className="text-[8px] font-black text-gray-400 uppercase">Assigned:</span>
+                                      <span className="text-[9px] font-bold text-[#0f3460] uppercase">{facilitatorName}</span>
+                                   </div>
+                                   <div className="flex items-center gap-1.5">
+                                      <span className="text-[8px] font-black text-[#cca43b] uppercase tracking-tighter">On-Site:</span>
+                                      <span className="text-[9px] font-black text-blue-600 uppercase italic tracking-tighter">{availability}</span>
+                                   </div>
+                                </div>
+                             </div>
+                             <div className="flex items-center gap-4">
+                                <div className="flex flex-col items-center">
+                                   <input 
+                                     type="number" 
+                                     min="0" max="15"
+                                     className="w-16 p-3 bg-white rounded-2xl text-center font-black text-sm shadow-inner border border-gray-100 group-hover:border-[#cca43b] transition"
+                                     value={settings.subjectDemands[activeClass]?.[subj] || 0}
+                                     onChange={e => {
+                                        const updatedDemands = { ...(settings.subjectDemands || {}) };
+                                        if (!updatedDemands[activeClass]) updatedDemands[activeClass] = {};
+                                        updatedDemands[activeClass][subj] = parseInt(e.target.value) || 0;
+                                        onSettingsChange({ ...settings, subjectDemands: updatedDemands });
+                                     }}
+                                   />
+                                   <span className="text-[8px] font-black text-gray-400 uppercase mt-1">Periods/Week</span>
+                                </div>
+                             </div>
+                          </div>
+                        );
+                      })}
                    </div>
                 </div>
 
                 <div className="space-y-8 flex flex-col justify-center bg-gray-50/50 p-10 rounded-[3.5rem] border border-gray-100 text-center">
                    <div className="space-y-4">
                       <span className="text-4xl">🤖</span>
-                      <h3 className="text-2xl font-black text-[#0f3460] uppercase">Draft Generator</h3>
+                      <h3 className="text-2xl font-black text-[#0f3460] uppercase">Balanced Cycle Synthesis</h3>
                       <p className="text-[11px] font-bold text-gray-400 leading-relaxed italic max-w-sm mx-auto">
-                        Generates a near-operable timetable considering subject demands, part-time constraints, and customary institutional activities (Worship, Club, etc.)
+                        Generates a pedagogical-optimized timetable prioritizing High Intensity subjects in the morning and respecting Location & Facilitator Availability profiles.
                       </p>
                    </div>
-                   <button onClick={smartGenerate} className="bg-[#0f3460] text-white py-6 rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:scale-[1.02] transition-all">Execute Cycle Synthesis</button>
+                   <button onClick={smartGenerate} className="bg-[#0f3460] text-white py-6 rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:scale-[1.02] transition-all">Execute Matrix Generation</button>
                    
                    <div className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-gray-100 mt-6 text-left">
-                      <h4 className="text-[10px] font-black uppercase text-[#cca43b] mb-4 tracking-widest border-b pb-2">Facilitator Constraint Review</h4>
+                      <h4 className="text-[10px] font-black uppercase text-[#cca43b] mb-4 tracking-widest border-b pb-2">Institutional Duty Constraints</h4>
                       <div className="space-y-3">
                          {settings.staff.filter(s => s.employmentType === 'Part Time').map(s => (
                            <div key={s.id} className="flex justify-between items-center text-[9px] font-black uppercase">
                               <span className="text-gray-500">{s.name}</span>
-                              <span className="text-blue-600">Avail: {s.availableDays?.join(', ') || 'ANY'}</span>
+                              <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Avail: {s.availableDays?.join(', ') || 'ANY'}</span>
                            </div>
                          ))}
-                         {settings.staff.filter(s => s.employmentType === 'Part Time').length === 0 && <p className="text-[10px] text-gray-300 italic">No Part-Time constraints registered.</p>}
+                         {settings.staff.filter(s => s.employmentType === 'Part Time').length === 0 && <p className="text-[10px] text-gray-300 italic">No Part-Time constraints registered in HR Ledger.</p>}
                       </div>
                    </div>
                 </div>
