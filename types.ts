@@ -18,6 +18,35 @@ export interface TerminalConfig {
   sectionBMax: number;
 }
 
+export interface MaterialRequest {
+  id: string;
+  itemName: string;
+  category: string;
+  purpose: string;
+  quantityRequested: number;
+  dateRequested: string;
+  dateRequired: string;
+  usageDuration: string;
+  priority: string;
+  remarks: string;
+  staffId: string;
+  staffName: string;
+  status: 'Pending' | 'Approved' | 'Issued' | 'Declined';
+  dateIssued?: string;
+}
+
+export interface ClassroomInventory {
+  id: string;
+  block: string;
+  roomNumber: string;
+  schoolClass: string;
+  inspectionDate: string;
+  items: Record<string, { status: 'Available' | 'Missing' | 'Damaged'; condition: 'Good' | 'Fair' | 'Poor' }>;
+  damagedMissingNotes: string;
+  priority: string;
+  comments: string;
+}
+
 export interface DailyExerciseEntry {
   id: string;
   subject: string;
@@ -328,6 +357,8 @@ export interface GlobalSettings {
   activeIndicators: string[];
   exerciseEntries?: DailyExerciseEntry[];
   specialDisciplinaryLogs?: SpecialDisciplinaryLog[];
+  materialRequests?: MaterialRequest[];
+  classroomInventories?: ClassroomInventory[];
   sbaConfigs: Record<string, Record<string, SBAConfig>>;
   sbaMarksLocked: boolean;
   reportTitle?: string;
@@ -510,5 +541,6 @@ export interface ObservationScheduleSlot {
   observerId: string;
   pupilGroup: string[];
   activityIndicator: string;
-  status: 'Pending' | 'Completed';
+  // Fix: Added 'In Progress' and 'Lapsed' to resolve comparison errors in components
+  status: 'Pending' | 'In Progress' | 'Completed' | 'Lapsed';
 }

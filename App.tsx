@@ -23,6 +23,7 @@ import ObservationDesk from './components/ObservationDesk';
 import AssessmentDesk from './components/AssessmentDesk';
 import PaymentPoint from './components/PaymentPoint';
 import LessonAssessmentDesk from './components/LessonAssessmentDesk';
+import MaterialsLogistics from './components/MaterialsLogistics';
 import { GlobalSettings, Student } from './types';
 import { processStudentData } from './utils';
 
@@ -125,6 +126,8 @@ const App: React.FC = () => {
       ],
       sbaConfigs: {},
       sbaMarksLocked: false,
+      materialRequests: [],
+      classroomInventories: [],
       financeConfig: {
         categories: ['School Fees', 'Lunch Fee', 'Tuition', 'Uniform/Wear', 'Books/Stationery'],
         classBills: {},
@@ -167,7 +170,7 @@ const App: React.FC = () => {
 
   const modules = [
     'Academic Calendar', 'Pupil Management', 'Payment Point', 'Staff Management', 'Class Time Table', 
-    'Examination', 'Assessment', 'Lesson Assessment Desk', 'Admin Dashboard'
+    'Examination', 'Assessment', 'Logistics & Materials', 'Lesson Assessment Desk', 'Admin Dashboard'
   ].filter(m => settings.modulePermissions[m] !== false);
 
   return (
@@ -270,6 +273,14 @@ const App: React.FC = () => {
                   onSettingsChange={setSettings}
                   department={activeTab}
                   activeClass={activeClass}
+                  notify={notify}
+                />
+              ) : activeModule === 'Logistics & Materials' ? (
+                <MaterialsLogistics
+                  settings={settings}
+                  onSettingsChange={setSettings}
+                  activeClass={activeClass}
+                  staffList={settings.staff}
                   notify={notify}
                 />
               ) : (

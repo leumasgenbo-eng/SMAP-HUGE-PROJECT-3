@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { Pupil, GlobalSettings, Student } from '../types';
 import { getDaycareGrade, getObservationRating, getNextClass } from '../utils';
+import { DAYCARE_ACTIVITY_GROUPS } from '../constants';
 import EditableField from './EditableField';
 
 interface Props {
@@ -16,19 +17,38 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
   const coreConfig = settings.earlyChildhoodGrading.core;
   const indConfig = settings.earlyChildhoodGrading.indicators;
   
-  // Strict filtering for the four core pillars
   const CORE_PILLARS = ["LANGUAGE AND LITERACY", "NUMERACY", "CREATIVE ACTIVITIES", "OUR WORLD OUR PEOPLE"];
   
   const coreScores = useMemo(() => {
     return pupil.computedScores.filter(s => CORE_PILLARS.includes(s.name.toUpperCase()));
   }, [pupil.computedScores]);
 
-  const developmentalIndicators = useMemo(() => {
-    return (settings.activeIndicators || []).filter(ind => {
-      const score = pupil.scores[ind] || 0;
-      return score > 0 && !CORE_PILLARS.includes(ind.toUpperCase());
-    });
-  }, [settings.activeIndicators, pupil.scores]);
+  // Aggregation Logic: Group sub-activities into Activity Groups for grading
+  const developmentalGroupRatings = useMemo(() => {
+    return Object.entries(DAYCARE_ACTIVITY_GROUPS).map(([groupName, indicators]) => {
+      let totalPoints = 0;
+      let count = 0;
+      
+      indicators.forEach(ind => {
+        const points = pupil.scores[ind] || 0;
+        if (points > 0) {
+          totalPoints += points;
+          count++;
+        }
+      });
+
+      const avgPoints = count > 0 ? totalPoints / count : 0;
+      const scaledPoints = (avgPoints / 3) * 100;
+      const rating = getObservationRating(scaledPoints, indConfig);
+
+      return {
+        groupName,
+        avgPoints,
+        rating,
+        isActive: count > 0
+      };
+    }).filter(g => g.isActive);
+  }, [pupil.scores, indConfig]);
 
   const handleSharePDF = async () => {
     const element = document.getElementById(`daycare-report-${pupil.no}`);
@@ -155,7 +175,7 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
         </div>
 
         <div className="mb-6 flex-1 overflow-y-auto">
-          <h3 className="text-[10px] font-black uppercase text-[#cca43b] mb-2 tracking-widest">Assessment on Social, Physical and Cultural Development</h3>
+          <h3 className="text-[10px] font-black uppercase text-[#cca43b] mb-2 tracking-widest">Social, Physical and Behavioral Development Groups</h3>
           {isWithheld ? (
              <div className="p-6 border-2 border-dashed border-gray-200 rounded-xl text-center">
                 <p className="text-[10px] font-black text-gray-400 uppercase">Assessment Details Locked</p>
@@ -164,26 +184,26 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
             <table className="w-full text-[10px] border-2 border-black border-collapse">
               <thead className="bg-[#0f3460] text-white uppercase text-[8px] font-black">
                 <tr>
-                  <th className="p-2 border border-white text-left">Skills / Activities Indicators</th>
-                  {indConfig.ranges.map(r => <th key={r.label} className="p-2 border border-white text-center w-10">{r.label}</th>)}
-                  <th className="p-2 border border-white text-center w-24">Aptitude</th>
+                  <th className="p-2 border border-white text-left">Activity Group (Derived from Sub-Activities)</th>
+                  {indConfig.ranges.map(r => <th key={r.label} className="p-2 border border-white text-center w-12">{r.label}</th>)}
+                  <th className="p-2 border border-white text-center w-24">Developmental Rank</th>
                 </tr>
               </thead>
               <tbody>
-                {developmentalIndicators.map((indicator, idx) => {
-                  const points = pupil.scores[indicator] || 0; 
-                  const scaledPoints = (points / 3) * 100;
-                  const rating = getObservationRating(scaledPoints, indConfig);
+                {developmentalGroupRatings.map((group, idx) => {
                   return (
-                    <tr key={idx} className="hover:bg-gray-50 transition">
-                      <td className="p-1 px-2 border border-black font-bold uppercase text-[8px]">{indicator}</td>
+                    <tr key={idx} className="hover:bg-gray-50 transition border-b border-black">
+                      <td className="p-2 px-3 border border-black font-black uppercase text-[9px] bg-gray-50">
+                        {group.groupName}
+                        <p className="text-[7px] text-gray-400 font-bold mt-0.5 normal-case italic">Avg: {group.avgPoints.toFixed(1)} pts</p>
+                      </td>
                       {indConfig.ranges.map(r => (
-                        <td key={r.label} className="p-1 border border-black text-center font-black">
-                           {rating.label === r.label ? '✓' : ''}
+                        <td key={r.label} className="p-1 border border-black text-center font-black text-lg">
+                           {group.rating.label === r.label ? '✓' : ''}
                         </td>
                       ))}
                       <td className="p-1 border border-black text-center font-black text-[7px] uppercase">
-                         {points >= 2 ? 'SATISFACTORY' : 'DEVELOPING'}
+                         {group.avgPoints >= 2.5 ? 'EXCEPTIONAL' : group.avgPoints >= 2.0 ? 'SATISFACTORY' : 'DEVELOPING'}
                       </td>
                     </tr>
                   );
@@ -193,14 +213,13 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
           )}
         </div>
 
-        {/* NRT Key Section - NEW */}
         {!isWithheld && (
           <div className="mb-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
-             <h5 className="text-[8px] font-black uppercase text-gray-400 mb-1 tracking-widest">3-Point NRT Developmental Key</h5>
+             <h5 className="text-[8px] font-black uppercase text-gray-400 mb-1 tracking-widest">NRT Group Grading Legend</h5>
              <div className="flex gap-6">
-                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-600"></span><span className="text-[7px] font-bold">A+: ADVANCED (Top performance)</span></div>
-                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#cca43b]"></span><span className="text-[7px] font-bold">A: ACHIEVING (Expected development)</span></div>
-                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span><span className="text-[7px] font-bold">D: DEVELOPING (Needs focus)</span></div>
+                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-600"></span><span className="text-[7px] font-bold">A+: ADVANCED (Exceeds developmental milestones)</span></div>
+                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#cca43b]"></span><span className="text-[7px] font-bold">A: ACHIEVING (At expected developmental level)</span></div>
+                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span><span className="text-[7px] font-bold">D: DEVELOPING (Area requiring specific intervention)</span></div>
              </div>
           </div>
         )}

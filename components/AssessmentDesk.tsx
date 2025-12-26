@@ -16,9 +16,8 @@ interface Props {
 }
 
 const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students, onStudentsUpdate, activeClass, department, notify }) => {
-  const [activeHubTab, setActiveHubTab] = useState<'indicators' | 'exercises' | 'disciplinary'>('exercises');
+  const [activeHubTab, setActiveHubTab] = useState<'indicators' | 'classwork' | 'homework' | 'disciplinary'>('classwork');
   const [indicatorMode, setIndicatorMode] = useState<'DeepSession' | 'DailyMonitoring' | 'GroupSummary'>('DailyMonitoring');
-  const [exerciseMode, setExerciseMode] = useState<'Classwork' | 'Homework'>('Classwork');
   const [disciplinarySubTab, setDisciplinarySubTab] = useState<'automatic' | 'special'>('automatic');
   
   const [defaulterModalOpen, setDefaulterModalOpen] = useState(false);
@@ -27,9 +26,16 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedGroup, setSelectedGroup] = useState<string>(Object.keys(DAYCARE_ACTIVITY_GROUPS)[0]);
-  const [activeIndicator, setActiveIndicator] = useState(DAYCARE_ACTIVITY_GROUPS[selectedGroup as keyof typeof DAYCARE_ACTIVITY_GROUPS]?.[0] || '');
+  
+  const groupIndicators = useMemo(() => DAYCARE_ACTIVITY_GROUPS[selectedGroup as keyof typeof DAYCARE_ACTIVITY_GROUPS] || [], [selectedGroup]);
+  const [selectedSubActivity, setSelectedSubActivity] = useState<string>(groupIndicators[0] || '');
 
-  // Special Indiscipline Logic
+  useEffect(() => {
+    if (groupIndicators.length > 0 && !groupIndicators.includes(selectedSubActivity)) {
+      setSelectedSubActivity(groupIndicators[0]);
+    }
+  }, [selectedGroup, groupIndicators]);
+
   const [newRule, setNewRule] = useState('');
   const [specialForm, setSpecialForm] = useState<Partial<SpecialDisciplinaryLog>>({
     studentId: '', type: '', date: new Date().toISOString().split('T')[0], repeatCount: 1,
@@ -40,10 +46,9 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
 
   const isDaycare = department === 'D&N';
 
-  // Ensure tab validity when switching classes/levels
   useEffect(() => {
     if (!isDaycare && activeHubTab === 'indicators') {
-      setActiveHubTab('exercises');
+      setActiveHubTab('classwork');
     }
   }, [department, isDaycare]);
 
@@ -55,15 +60,12 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
     strand: '', subStrand: '', indicator: ''
   });
 
-  const classStudents = useMemo(() => students.filter(s => s.currentClass === activeClass), [students, activeClass]);
+  useEffect(() => {
+    if (activeHubTab === 'classwork') setExEntry(prev => ({ ...prev, type: 'Classwork' }));
+    if (activeHubTab === 'homework') setExEntry(prev => ({ ...prev, type: 'Homework' }));
+  }, [activeHubTab]);
 
-  const currentCompliance = useMemo(() => {
-    const demand = settings.subjectDemands[activeClass]?.[exEntry.subject || ''] || 1;
-    const weeklyEntries = (settings.exerciseEntries || []).filter(e => e.week === exEntry.week && e.subject === exEntry.subject);
-    const count = weeklyEntries.length;
-    const ratio = count / demand;
-    return { count, demand, ratio };
-  }, [settings.exerciseEntries, settings.subjectDemands, activeClass, exEntry.subject, exEntry.week]);
+  const classStudents = useMemo(() => students.filter(s => s.currentClass === activeClass), [students, activeClass]);
 
   const groupSummaryData = useMemo(() => {
     if (indicatorMode !== 'GroupSummary') return null;
@@ -96,7 +98,7 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
     return { studentAverages, groupStats, groupNames };
   }, [classStudents, indicatorMode]);
 
-  const handleIndicatorScore = (studentId: string, indicator: string, score: number) => {
+  const handleIndicatorScore = (studentId: string, indicator: string, score: number, remark?: string) => {
     const updated = students.map(s => {
       if (s.id === studentId) {
         const currentDetails = s.scoreDetails?.[indicator] || { total: 0, grade: '', facilitatorRemark: '', dailyScores: {} };
@@ -107,7 +109,13 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
           ...s,
           scoreDetails: { 
             ...(s.scoreDetails || {}), 
-            [indicator]: { ...currentDetails, dailyScores: newDailyScores, sectionA: avg, total: avg } 
+            [indicator]: { 
+              ...currentDetails, 
+              dailyScores: newDailyScores, 
+              sectionA: avg, 
+              total: avg,
+              facilitatorRemark: remark !== undefined ? remark : currentDetails.facilitatorRemark
+            } 
           }
         };
       }
@@ -134,13 +142,13 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
     const newEntry = { 
       ...exEntry, 
       id: crypto.randomUUID(), 
-      type: exerciseMode,
+      type: activeHubTab === 'classwork' ? 'Classwork' : 'Homework',
       defaulterReasons: defaulterReasonsMap || {},
       isDisciplinaryReferral: isDisciplinary || (Object.keys(exEntry.pupilScores || {}).length < classStudents.length)
     } as DailyExerciseEntry;
     const updated = [...(settings.exerciseEntries || []), newEntry];
     onSettingsChange({ ...settings, exerciseEntries: updated });
-    notify(`${exerciseMode} Logged. ${newEntry.isDisciplinaryReferral ? 'DISCIPLINARY ALERT ACTIVE.' : ''}`, "success");
+    notify(`${newEntry.type} Logged. ${newEntry.isDisciplinaryReferral ? 'DISCIPLINARY ALERT ACTIVE.' : ''}`, "success");
     setExEntry({ ...exEntry, pupilStatus: {}, pupilScores: {}, bloomTaxonomy: [], strand: '', subStrand: '', indicator: '' });
     setDefaulterModalOpen(false);
   };
@@ -174,17 +182,33 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Branding Header */}
+      {/* Institutional Branding Header - Fully Editable Particulars */}
       <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-4 no-print">
-        <EditableField value={settings.schoolName} onSave={v => onSettingsChange({...settings, schoolName: v})} className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter" />
-        <EditableField value={settings.motto} onSave={v => onSettingsChange({...settings, motto: v})} className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" />
+        <EditableField 
+          value={settings.schoolName} 
+          onSave={v => onSettingsChange({...settings, schoolName: v})} 
+          className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter" 
+        />
+        <EditableField 
+          value={settings.motto} 
+          onSave={v => onSettingsChange({...settings, motto: v})} 
+          className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" 
+        />
+        <div className="flex justify-center gap-6 text-[11px] font-black text-gray-400 uppercase tracking-widest pt-2 border-t border-gray-50 w-full max-w-2xl">
+          <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
+          <span>•</span>
+          <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
+          <span>•</span>
+          <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
+        </div>
       </div>
 
       <div className="bg-[#0f3460] p-6 rounded-[3rem] text-white flex justify-center gap-4 no-print shadow-xl">
         {isDaycare && (
           <button onClick={() => setActiveHubTab('indicators')} className={`px-8 py-3 rounded-2xl text-xs font-black uppercase transition ${activeHubTab === 'indicators' ? 'bg-[#cca43b] text-[#0f3460] shadow-lg' : 'bg-white/10 hover:bg-white/20'}`}>Indicator Terminal</button>
         )}
-        <button onClick={() => setActiveHubTab('exercises')} className={`px-8 py-3 rounded-2xl text-xs font-black uppercase transition ${activeHubTab === 'exercises' ? 'bg-[#cca43b] text-[#0f3460] shadow-lg' : 'bg-white/10 hover:bg-white/20'}`}>Assessment Log Entry</button>
+        <button onClick={() => setActiveHubTab('classwork')} className={`px-8 py-3 rounded-2xl text-xs font-black uppercase transition ${activeHubTab === 'classwork' ? 'bg-[#cca43b] text-[#0f3460] shadow-lg' : 'bg-white/10 hover:bg-white/20'}`}>Classwork Detail</button>
+        <button onClick={() => setActiveHubTab('homework')} className={`px-8 py-3 rounded-2xl text-xs font-black uppercase transition ${activeHubTab === 'homework' ? 'bg-[#cca43b] text-[#0f3460] shadow-lg' : 'bg-white/10 hover:bg-white/20'}`}>Homework Detail</button>
         <button onClick={() => setActiveHubTab('disciplinary')} className={`px-8 py-3 rounded-2xl text-xs font-black uppercase transition ${activeHubTab === 'disciplinary' ? 'bg-red-600 text-white shadow-lg' : 'bg-white/10 hover:bg-white/20'}`}>Disciplinary Records</button>
       </div>
 
@@ -194,7 +218,7 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
               <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10 border-b pb-8">
                  <div className="space-y-1">
                     <h3 className="text-3xl font-black text-[#0f3460] uppercase tracking-tighter">Preschool Indicator Terminal</h3>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Measure: Emerging (D) • Achieving (A) • Advanced (A+)</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Grading Strategy: Sub-Activity Scores form Group Average</p>
                  </div>
                  <div className="flex bg-gray-100 p-1.5 rounded-2xl shadow-inner no-print">
                     <button onClick={() => setIndicatorMode('DailyMonitoring')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${indicatorMode === 'DailyMonitoring' ? 'bg-white text-[#0f3460] shadow-sm' : 'text-gray-400'}`}>Monitoring Grid</button>
@@ -203,30 +227,36 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                  </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end no-print bg-gray-50 p-8 rounded-[2.5rem] mb-10 shadow-inner">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-gray-400 px-2">1. Select Activity Group (For Grading)</label>
+                    <select className="w-full p-4 bg-white rounded-2xl font-black text-[#0f3460] border-none shadow-sm text-xs outline-none" value={selectedGroup} onChange={e => setSelectedGroup(e.target.value)}>
+                        {Object.keys(DAYCARE_ACTIVITY_GROUPS).map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-gray-400 px-2">2. Specific Sub-Activity (Score Entry)</label>
+                    <select className="w-full p-4 bg-white rounded-2xl font-black text-[#cca43b] border-none shadow-sm text-xs outline-none" value={selectedSubActivity} onChange={e => setSelectedSubActivity(e.target.value)}>
+                        {groupIndicators.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-gray-400 px-2">3. Monitoring Date</label>
+                    <input type="date" className="w-full p-4 bg-white rounded-2xl font-black text-[#0f3460] border-none shadow-sm text-xs outline-none" value={date} onChange={e => setDate(e.target.value)} />
+                  </div>
+                  <button onClick={() => notify("Routine snapshot saved!", "success")} className="bg-[#2e8b57] text-white py-4 rounded-2xl font-black uppercase text-xs shadow-xl hover:scale-105 transition">Sync Current Mode</button>
+              </div>
+
               {indicatorMode === 'DailyMonitoring' ? (
                  <div className="space-y-10 animate-fadeIn">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end no-print">
-                       <div className="space-y-1">
-                          <label className="text-[9px] font-black uppercase text-gray-400 px-2">1. Select Activity Group</label>
-                          <select className="w-full p-4 bg-gray-50 rounded-2xl font-black text-[#0f3460] border-none shadow-inner text-xs" value={selectedGroup} onChange={e => setSelectedGroup(e.target.value)}>
-                             {Object.keys(DAYCARE_ACTIVITY_GROUPS).map(g => <option key={g} value={g}>{g}</option>)}
-                          </select>
-                       </div>
-                       <div className="space-y-1">
-                          <label className="text-[9px] font-black uppercase text-gray-400 px-2">2. Monitoring Date</label>
-                          <input type="date" className="w-full p-4 bg-gray-50 rounded-2xl font-black text-[#0f3460] border-none shadow-inner text-xs" value={date} onChange={e => setDate(e.target.value)} />
-                       </div>
-                       <button onClick={() => notify("Routine snapshot saved!", "success")} className="bg-[#2e8b57] text-white py-4 rounded-2xl font-black uppercase text-xs shadow-xl">Sync Monitoring</button>
-                    </div>
-
                     <div className="overflow-x-auto rounded-[2rem] border border-gray-100 shadow-lg">
                        <table className="w-full text-left text-[11px] border-collapse">
                           <thead className="bg-[#f4f6f7] text-[#0f3460] font-black uppercase sticky top-0 z-20">
                              <tr>
                                 <th className="p-6 border-b w-64 bg-[#f4f6f7]">Pupil Name</th>
                                 {currentIndicators.map(ind => (
-                                   <th key={ind} className="p-4 border-b border-x border-gray-200 h-48 align-bottom text-center min-w-[120px] bg-white/50">
-                                      <div className="[writing-mode:vertical-rl] rotate-180 text-[9px] uppercase tracking-tighter pb-4">{ind}</div>
+                                   <th key={ind} className={`p-4 border-b border-x border-gray-200 h-48 align-bottom text-center min-w-[120px] transition-all ${selectedSubActivity === ind ? 'bg-[#cca43b]/10' : 'bg-white/50'}`}>
+                                      <div className={`[writing-mode:vertical-rl] rotate-180 text-[9px] uppercase tracking-tighter pb-4 font-black ${selectedSubActivity === ind ? 'text-[#cca43b]' : 'text-[#0f3460]'}`}>{ind}</div>
                                    </th>
                                 ))}
                              </tr>
@@ -238,7 +268,7 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                                    {currentIndicators.map(ind => {
                                       const score = s.scoreDetails?.[ind]?.dailyScores?.[date] || 0;
                                       return (
-                                         <td key={ind} className="p-4 text-center border-x border-gray-50">
+                                         <td key={ind} className={`p-4 text-center border-x border-gray-50 ${selectedSubActivity === ind ? 'bg-[#cca43b]/5' : ''}`}>
                                             <div className="flex gap-1 justify-center">
                                                {[1, 2, 3].map(v => (
                                                   <button key={v} onClick={() => handleIndicatorScore(s.id, ind, v)} className={`w-8 h-8 rounded-lg text-[9px] font-black transition-all ${score === v ? (v === 3 ? 'bg-green-600 text-white' : v === 2 ? 'bg-[#cca43b] text-white' : 'bg-red-500 text-white') : 'bg-gray-100 text-gray-300'}`}>
@@ -255,10 +285,59 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                        </table>
                     </div>
                  </div>
+              ) : indicatorMode === 'DeepSession' ? (
+                <div className="space-y-10 animate-fadeIn">
+                   <div className="flex justify-between items-center bg-blue-50 p-6 rounded-[2rem] border border-blue-100">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-xl shadow-sm">🧠</div>
+                        <div>
+                          <h4 className="text-xl font-black text-[#0f3460] uppercase">{selectedSubActivity}</h4>
+                          <p className="text-[9px] font-black text-[#cca43b] uppercase tracking-widest">Single-Indicator Deep Entry Session</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                         <p className="text-[8px] font-black text-gray-400 uppercase">Target Group</p>
+                         <p className="text-xs font-black text-[#0f3460] uppercase">{selectedGroup}</p>
+                      </div>
+                   </div>
+
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[500px] overflow-y-auto pr-4 scrollbar-hide">
+                      {classStudents.map(s => {
+                        const detail = s.scoreDetails?.[selectedSubActivity] || { dailyScores: {}, facilitatorRemark: '' };
+                        const score = detail.dailyScores?.[date] || 0;
+                        return (
+                          <div key={s.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-lg flex flex-col gap-4 hover:border-[#cca43b] transition">
+                             <div className="flex justify-between items-center border-b pb-4">
+                                <span className="text-xs font-black uppercase text-[#0f3460]">{s.firstName} {s.surname}</span>
+                                <div className="flex gap-2">
+                                  {[1, 2, 3].map(v => (
+                                    <button key={v} onClick={() => handleIndicatorScore(s.id, selectedSubActivity, v)} className={`w-10 h-10 rounded-xl font-black text-[10px] transition-all ${score === v ? (v === 3 ? 'bg-green-600 text-white shadow-md' : v === 2 ? 'bg-[#cca43b] text-white shadow-md' : 'bg-red-500 text-white shadow-md') : 'bg-gray-50 text-gray-300'}`}>
+                                      {v === 3 ? 'A+' : v === 2 ? 'A' : 'D'}
+                                    </button>
+                                  ))}
+                                </div>
+                             </div>
+                             <div className="flex flex-col gap-1">
+                               <label className="text-[8px] font-black text-gray-400 uppercase px-1">Deep Session Qualitative Note</label>
+                               <textarea 
+                                  placeholder="Observations for this session..." 
+                                  className="w-full p-4 bg-gray-50 rounded-2xl border-none text-[10px] font-bold italic outline-none focus:ring-1 focus:ring-[#cca43b] resize-none h-20"
+                                  value={detail.facilitatorRemark || ''}
+                                  onChange={e => handleIndicatorScore(s.id, selectedSubActivity, score, e.target.value)}
+                               />
+                             </div>
+                          </div>
+                        );
+                      })}
+                   </div>
+                </div>
               ) : indicatorMode === 'GroupSummary' ? (
                 <div className="space-y-10 animate-fadeIn">
-                   <div className="flex justify-between items-center no-print">
-                      <h4 className="text-xl font-black text-[#cca43b] uppercase">Activity Group Performance Broad Sheet</h4>
+                   <div className="flex flex-col md:flex-row justify-between items-center no-print border-b pb-6 gap-4">
+                      <div>
+                        <h4 className="text-xl font-black text-[#cca43b] uppercase">Activity Group Performance Broad Sheet</h4>
+                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest italic">Computed by averaging sub-activity scores per group</p>
+                      </div>
                       <button onClick={() => window.print()} className="bg-[#0f3460] text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] shadow-lg">Print Group Analysis</button>
                    </div>
                    <div className="overflow-x-auto rounded-[3rem] border border-gray-100 shadow-2xl">
@@ -309,12 +388,12 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
               )}
            </div>
         </div>
-      ) : activeHubTab === 'exercises' ? (
+      ) : (activeHubTab === 'classwork' || activeHubTab === 'homework') ? (
         <div className="space-y-6">
            <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-10 border-b pb-10">
                  <div className="space-y-6">
-                    <h3 className="text-2xl font-black text-[#0f3460] uppercase">{exerciseMode} Detail</h3>
+                    <h3 className="text-2xl font-black text-[#0f3460] uppercase">{activeHubTab === 'classwork' ? 'Classwork Detail' : 'Homework Detail'}</h3>
                     <div className="grid grid-cols-2 gap-4">
                        <div className="space-y-1">
                           <label className="text-[9px] font-black uppercase text-gray-400">Subject / Pillar</label>
@@ -333,18 +412,37 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                        <input type="date" className="w-full p-4 bg-gray-50 rounded-2xl" value={exEntry.date} onChange={e => setExEntry({...exEntry, date: e.target.value})} />
-                       <input type="number" className="w-full p-4 bg-[#0f3460] text-white rounded-2xl font-black text-lg" value={exEntry.maxScore} onChange={e => setExEntry({...exEntry, maxScore: parseInt(e.target.value)})} />
+                       <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase text-gray-400 px-2">Max Possible Score</label>
+                          <input type="number" className="w-full p-4 bg-[#0f3460] text-white rounded-2xl font-black text-lg" value={exEntry.maxScore} onChange={e => setExEntry({...exEntry, maxScore: parseInt(e.target.value)})} />
+                       </div>
                     </div>
-                    <button onClick={validateAndSave} className="w-full bg-[#2e8b57] text-white py-5 rounded-3xl font-black uppercase tracking-widest shadow-xl hover:scale-[1.01] transition">Authorize Log Entry</button>
+
+                    <div className="bg-gray-50 p-6 rounded-2xl space-y-4">
+                       <h4 className="text-[10px] font-black uppercase text-[#0f3460] tracking-widest border-b pb-2">Bloom's Taxonomy Profile</h4>
+                       <div className="grid grid-cols-2 gap-2">
+                          {BLOOM_TAXONOMY.map(b => (
+                            <button 
+                               key={b} 
+                               onClick={() => setExEntry({...exEntry, bloomTaxonomy: exEntry.bloomTaxonomy?.includes(b) ? exEntry.bloomTaxonomy.filter(i => i !== b) : [...(exEntry.bloomTaxonomy || []), b]})}
+                               className={`p-2 rounded-xl text-[9px] font-black uppercase transition ${exEntry.bloomTaxonomy?.includes(b) ? 'bg-[#cca43b] text-[#0f3460] shadow-md' : 'bg-white text-gray-400 border border-gray-100'}`}
+                            >
+                               {b}
+                            </button>
+                          ))}
+                       </div>
+                    </div>
+
+                    <button onClick={validateAndSave} className="w-full bg-[#2e8b57] text-white py-5 rounded-3xl font-black uppercase tracking-widest shadow-xl hover:scale-[1.01] transition">Authorize {activeHubTab === 'classwork' ? 'Classwork' : 'Homework'} Log</button>
                  </div>
 
-                 <div className="h-[600px] overflow-y-auto pr-4 space-y-2 border-l pl-10 border-gray-100">
-                    <h4 className="text-xs font-black uppercase text-gray-400 mb-6 sticky top-0 bg-white py-2 z-10">Class Scoring Desk</h4>
+                 <div className="h-[650px] overflow-y-auto pr-4 space-y-2 border-l pl-10 border-gray-100">
+                    <h4 className="text-xs font-black uppercase text-gray-400 mb-6 sticky top-0 bg-white py-2 z-10">Scoring Desk • {activeClass} Roll</h4>
                     {classStudents.map(s => (
                        <div key={s.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-[1.5rem] hover:bg-white border-2 border-transparent hover:border-gray-100 transition shadow-sm">
                           <span className="text-[11px] font-black uppercase text-[#0f3460]">{s.firstName} {s.surname}</span>
                           <div className="flex gap-4 items-center">
-                             <input type="number" className="w-16 p-2 bg-white rounded-lg text-center font-black text-blue-600 shadow-inner" placeholder="Scr" value={exEntry.pupilScores?.[s.id] || ''} onChange={e => setExEntry({...exEntry, pupilScores: {...(exEntry.pupilScores || {}), [s.id]: parseInt(e.target.value)}})} />
+                             <input type="number" className="w-16 p-2 bg-white rounded-lg text-center font-black text-blue-600 shadow-inner outline-none focus:ring-1 focus:ring-[#cca43b]" placeholder="Scr" value={exEntry.pupilScores?.[s.id] || ''} onChange={e => setExEntry({...exEntry, pupilScores: {...(exEntry.pupilScores || {}), [s.id]: parseInt(e.target.value)}})} />
                              <div className="flex gap-1">
                                 {['M', 'D', 'X'].map(st => (
                                    <button key={st} onClick={() => setExEntry({...exEntry, pupilStatus: {...(exEntry.pupilStatus || {}), [s.id]: (st === 'M' ? 'Marked' : st === 'D' ? 'Defaulter' : 'Missing') as any}})} className={`w-8 h-8 rounded-lg text-[9px] font-black transition ${exEntry.pupilStatus?.[s.id] === (st === 'M' ? 'Marked' : st === 'D' ? 'Defaulter' : 'Missing') ? 'bg-[#0f3460] text-white shadow-md' : 'bg-white text-gray-300'}`}>{st}</button>
@@ -449,47 +547,6 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                              <button onClick={handleAddRule} className="w-full bg-[#cca43b] text-[#0f3460] py-2 rounded-xl text-[9px] font-black uppercase shadow-lg">Append Rule</button>
                           </div>
                        </div>
-                       <div className="bg-gray-50 p-8 rounded-[3rem] border border-gray-100 space-y-4">
-                          <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Correction Guide</h4>
-                          <div className="space-y-3 text-[9px] font-bold text-gray-500 uppercase leading-relaxed">
-                             <p>1. Immediate redirection and supportive coaching.</p>
-                             <p>2. Temporary exclusion from preferred class activities.</p>
-                             <p>3. Formal parental meeting and disciplinary committee referral.</p>
-                          </div>
-                       </div>
-                    </div>
-                 </div>
-
-                 <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-xl space-y-6">
-                    <h3 className="text-xl font-black text-[#0f3460] uppercase">Incident Audit Trail</h3>
-                    <div className="overflow-x-auto rounded-[2rem] border border-gray-100">
-                       <table className="w-full text-left text-[11px] border-collapse">
-                          <thead className="bg-[#f4f6f7] text-[#0f3460] font-black uppercase">
-                             <tr>
-                                <th className="p-4 border-b">Date</th>
-                                <th className="p-4 border-b">Learner</th>
-                                <th className="p-4 border-b">Offense Type</th>
-                                <th className="p-4 border-b text-center">Repeat</th>
-                                <th className="p-4 border-b">Resolution</th>
-                             </tr>
-                          </thead>
-                          <tbody>
-                             {(settings.specialDisciplinaryLogs || []).filter(l => l.class === activeClass).reverse().map(log => (
-                                <tr key={log.id} className="border-b hover:bg-gray-50 transition">
-                                   <td className="p-4 font-mono text-gray-400">{log.date}</td>
-                                   <td className="p-4 font-black uppercase text-[#0f3460]">{log.studentName}</td>
-                                   <td className="p-4 font-bold text-red-600 uppercase italic">{log.type}</td>
-                                   <td className="p-4 text-center font-black text-lg text-red-400">{log.repeatCount}</td>
-                                   <td className="p-4 italic text-gray-500 text-[10px]">
-                                      {log.repeatCount === 1 ? log.correction1 : log.repeatCount === 2 ? log.correction2 : log.correction3}
-                                   </td>
-                                </tr>
-                             ))}
-                             {(!settings.specialDisciplinaryLogs || settings.specialDisciplinaryLogs.filter(l => l.class === activeClass).length === 0) && (
-                                <tr><td colSpan={5} className="p-20 text-center text-gray-300 font-black uppercase italic tracking-widest">No special records for this class.</td></tr>
-                             )}
-                          </tbody>
-                       </table>
                     </div>
                  </div>
               </div>
