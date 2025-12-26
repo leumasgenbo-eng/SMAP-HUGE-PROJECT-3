@@ -70,7 +70,6 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
         {/* Header */}
         <div className="text-center border-b-4 border-black pb-4 mb-4 flex flex-col items-center">
           <div className="w-full flex justify-between items-center mb-2">
-            {/* Logo Area */}
             <div className="w-20 h-20 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden">
                {settings.logo ? (
                  <img src={settings.logo} className="w-full h-full object-contain" alt="Logo" />
@@ -91,7 +90,6 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
                 className="text-[10px] font-black w-full text-center uppercase tracking-[0.3em] text-[#cca43b] mt-1"
               />
             </div>
-
             <div className="w-20 opacity-0">Logo Spacing</div>
           </div>
           
@@ -201,6 +199,25 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
           )}
         </div>
 
+        {/* Grading Key - NEW */}
+        {!isWithheld && (
+          <div className="mb-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <h5 className="text-[8px] font-black uppercase text-gray-400 mb-2 tracking-widest border-b border-gray-200 pb-1">9-Point NRT Grading & Weighting System Key</h5>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {settings.gradingScale.map(g => (
+                <div key={g.grade} className="flex items-center gap-1">
+                  <span className="text-[8px] font-black" style={{ color: g.color }}>{g.grade}</span>
+                  <span className="text-[7px] text-gray-500">({g.value}pt): {g.remark}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 flex gap-4 text-[7px] font-black uppercase text-[#0f3460]">
+               <span>SBA ({settings.assessmentWeights.exercises + settings.assessmentWeights.cats}%): CW/HW + CAT Series</span>
+               <span>EXAM ({settings.assessmentWeights.terminal}%): Section A (Obj) + Section B (Theory)</span>
+            </div>
+          </div>
+        )}
+
         {/* Conduct, Interest, Punctuality Grid */}
         {!isWithheld && (
           <div className="grid grid-cols-4 gap-2 mb-4">
@@ -293,7 +310,7 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
                <p className="text-[9px] font-black uppercase tracking-widest leading-none">Headteacher Signature / Stamp</p>
                <EditableField 
                  value={settings.reportFooterText || "Certified Document of United Baylor Academy"} 
-                 onSave={(v) => onSettingsChange({...settings, reportFooterText: v})}
+                 onSave={(v) => onSettingsChange({...settings, reportFooterText: v})} 
                  className="text-[7px] text-gray-400 mt-1 uppercase font-bold tracking-tighter"
                />
              </div>

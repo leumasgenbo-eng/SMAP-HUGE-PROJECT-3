@@ -1,11 +1,12 @@
 
 import React from 'react';
-import { Pupil } from '../types';
+import { Pupil, GlobalSettings } from '../types';
+import EditableField from './EditableField';
 
 interface Props {
   pupil: Pupil;
-  schoolInfo: any;
-  setSchoolInfo: (info: any) => void;
+  settings: GlobalSettings;
+  onSettingsChange: (s: GlobalSettings) => void;
   pupilRemarks: { [pupilNo: number]: { [subject: string]: string } };
   setPupilRemarks: React.Dispatch<React.SetStateAction<{ [pupilNo: number]: { [subject: string]: string } }>>;
   generalRemarks: { [pupilNo: number]: string };
@@ -13,14 +14,10 @@ interface Props {
 }
 
 const PupilReport: React.FC<Props> = ({ 
-  pupil, schoolInfo, setSchoolInfo, 
+  pupil, settings, onSettingsChange, 
   pupilRemarks, setPupilRemarks, 
   generalRemarks, setGeneralRemarks 
 }) => {
-
-  const updateInfo = (key: string, val: string) => {
-    setSchoolInfo({ ...schoolInfo, [key]: val });
-  };
 
   const handleSubjectRemark = (subj: string, val: string) => {
     setPupilRemarks(prev => ({
@@ -44,97 +41,91 @@ const PupilReport: React.FC<Props> = ({
   const performanceStatus = pupil.aggregate <= 15 ? 'EXCEPTIONAL' : pupil.aggregate <= 30 ? 'SATISFACTORY' : 'REQUIRES INTERVENTION';
 
   return (
-    <div className="bg-white p-10 border-[10px] border-double border-gray-900 max-w-5xl mx-auto shadow-2xl relative page-break">
+    <div className="bg-white p-12 border-[12px] border-double border-[#0f3460] max-w-5xl mx-auto shadow-2xl relative page-break animate-fadeIn">
       {/* Header */}
-      <div className="text-center border-b-4 border-black pb-8 mb-8">
-        <div className="mb-4">
-          <input 
-            className="text-5xl font-black w-full text-center border-none focus:ring-0 uppercase tracking-tighter"
-            value={schoolInfo.name}
-            onChange={(e) => updateInfo('name', e.target.value)}
-          />
-          <input 
-            className="text-lg text-gray-600 w-full text-center border-none focus:ring-0 font-bold"
-            value={schoolInfo.address}
-            onChange={(e) => updateInfo('address', e.target.value)}
-          />
-        </div>
-        <div className="bg-black text-white py-2 px-8 inline-block font-black text-xl rounded-sm uppercase tracking-widest">
-          {schoolInfo.mockSeries} INDIVIDUAL REPORT CARD
+      <div className="text-center border-b-4 border-black pb-8 mb-8 flex flex-col items-center">
+        <EditableField 
+          value={settings.schoolName} 
+          onSave={v => onSettingsChange({...settings, schoolName: v})} 
+          className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-2" 
+        />
+        <EditableField 
+          value={settings.address} 
+          onSave={v => onSettingsChange({...settings, address: v})} 
+          className="text-lg text-gray-500 uppercase font-bold" 
+        />
+        <div className="bg-black text-white py-2 px-10 inline-block font-black text-sm rounded-sm uppercase tracking-[0.3em] mt-6">
+          {settings.mockSeries || 'TERMINAL'} INDIVIDUAL REPORT CARD
         </div>
       </div>
 
       {/* Info Grid */}
       <div className="grid grid-cols-2 gap-12 mb-10">
-        <div className="space-y-3 border-r-2 border-dashed border-gray-300 pr-12">
-          <div className="flex justify-between items-baseline border-b border-gray-200">
-            <span className="text-xs font-black uppercase text-gray-500">Pupil Name</span>
-            <span className="font-black text-2xl text-gray-900">{pupil.name}</span>
+        <div className="space-y-4 border-r-2 border-dashed border-gray-200 pr-12">
+          <div className="flex justify-between items-baseline border-b border-gray-100 pb-1">
+            <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Pupil Name</span>
+            <span className="font-black text-2xl text-[#0f3460] uppercase">{pupil.name}</span>
           </div>
-          <div className="flex justify-between items-baseline border-b border-gray-200">
-            <span className="text-xs font-black uppercase text-gray-500">Student ID</span>
-            <span className="font-bold">UBA/2025/M2-{pupil.no.toString().padStart(3, '0')}</span>
+          <div className="flex justify-between items-baseline border-b border-gray-100 pb-1">
+            <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Student Serial</span>
+            <span className="font-bold text-gray-600 font-mono uppercase">UBA/25/M2-{pupil.no.toString().padStart(3, '0')}</span>
           </div>
-          <div className="flex justify-between items-baseline border-b border-gray-200">
-            <span className="text-xs font-black uppercase text-gray-500">Academic Year</span>
-            <span className="font-bold">{schoolInfo.academicYear}</span>
+          <div className="flex justify-between items-baseline border-b border-gray-100 pb-1">
+            <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Academic Year</span>
+            <EditableField value={settings.academicYear} onSave={v => onSettingsChange({...settings, academicYear: v})} className="font-bold text-gray-800" />
           </div>
         </div>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center bg-gray-900 text-white p-2 rounded">
-            <span className="text-xs font-black uppercase">Category Rank</span>
-            <span className="font-black text-xl">{pupil.categoryCode} - {pupil.category}</span>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center bg-[#0f3460] text-white p-3 rounded-lg shadow-lg">
+            <span className="text-[10px] font-black uppercase tracking-widest">Classification</span>
+            <span className="font-black text-lg">{pupil.categoryCode} - {pupil.category}</span>
           </div>
-          <div className="flex justify-between items-center border-b border-gray-200">
-            <span className="text-xs font-black uppercase text-gray-500">Attendance</span>
-            <div className="flex items-center gap-2">
-              <input 
-                className="w-16 text-right font-black border-b-2 border-gray-400 focus:outline-none focus:border-blue-600 px-1" 
-                value={schoolInfo.totalAttendance} 
-                onChange={(e) => updateInfo('totalAttendance', e.target.value)} 
-              />
-              <span className="font-bold text-gray-400">Days</span>
+          <div className="flex justify-between items-center border-b border-gray-100 pb-1">
+            <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Cumulative Attendance</span>
+            <div className="flex items-center gap-2 font-bold text-gray-700">
+               <span>{pupil.attendance}</span>
+               <span className="text-gray-300">/</span>
+               <span>{settings.totalAttendance}</span>
+               <span className="text-[8px] font-black text-gray-400 uppercase ml-1">Days</span>
             </div>
           </div>
-          <div className="flex justify-between items-center border-b border-gray-200">
-            <span className="text-xs font-black uppercase text-gray-500">Aggregate (Best 6)</span>
-            <span className="font-black text-3xl text-red-700">{pupil.aggregate}</span>
+          <div className="flex justify-between items-center border-b border-gray-100 pb-1">
+            <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Best 6 Aggregate</span>
+            <span className="font-black text-4xl text-red-700">{pupil.aggregate}</span>
           </div>
         </div>
       </div>
 
-      {/* Main Table - Sorted by best performing subject */}
+      {/* Main Table */}
       <div className="mb-10">
-        <h3 className="text-xs font-black uppercase text-gray-400 mb-2 tracking-widest">Subject Performance Breakdown (Sorted by Best Achievement)</h3>
-        <table className="w-full text-sm border-2 border-black">
-          <thead className="bg-gray-100">
-            <tr className="uppercase text-[10px] font-black">
-              <th className="p-3 border-2 border-black text-left">Subject</th>
-              <th className="p-3 border-2 border-black">Score</th>
-              <th className="p-3 border-2 border-black">Grade</th>
-              <th className="p-3 border-2 border-black">Class Avg</th>
-              <th className="p-3 border-2 border-black text-left">Remark / Subject Teacher Note</th>
-              <th className="p-3 border-2 border-black text-left">Facilitator</th>
+        <h3 className="text-[9px] font-black uppercase text-gray-400 mb-2 tracking-[0.2em]">Subject Performance Matrix (Ranked Analysis)</h3>
+        <table className="w-full text-xs border-2 border-black border-collapse">
+          <thead className="bg-[#f4f6f7]">
+            <tr className="uppercase text-[9px] font-black">
+              <th className="p-4 border border-black text-left">Academic Pillar / Subject</th>
+              <th className="p-4 border border-black text-center w-16">Score</th>
+              <th className="p-4 border border-black text-center w-16">Grade</th>
+              <th className="p-4 border border-black text-center w-24">Class Avg</th>
+              <th className="p-4 border border-black text-left">Facilitator's Narrative Remark</th>
             </tr>
           </thead>
           <tbody>
             {pupil.computedScores.map((s) => (
-              <tr key={s.name} className="hover:bg-gray-50">
-                <td className="p-3 border-2 border-black font-black bg-gray-50">{s.name}</td>
-                <td className={`p-3 border-2 border-black text-center font-black text-lg ${s.score >= 50 ? 'text-green-700' : 'text-red-600'}`}>
+              <tr key={s.name} className="hover:bg-gray-50 transition border-b border-black">
+                <td className="p-4 border border-black font-black uppercase bg-gray-50/50">{s.name}</td>
+                <td className={`p-4 border border-black text-center font-black text-lg ${s.score >= 50 ? 'text-green-700' : 'text-red-600'}`}>
                   {s.score}
                 </td>
-                <td className="p-3 border-2 border-black text-center font-black text-xl bg-gray-50">{s.grade}</td>
-                <td className="p-3 border-2 border-black text-center text-gray-400 font-bold italic">{s.classAverage.toFixed(0)}</td>
-                <td className="p-3 border-2 border-black min-w-[200px]">
+                <td className="p-4 border border-black text-center font-black text-xl bg-[#0f3460] text-white shadow-inner">{s.grade}</td>
+                <td className="p-4 border border-black text-center text-gray-400 font-bold italic">{s.classAverage.toFixed(0)}%</td>
+                <td className="p-4 border border-black">
                   <textarea 
-                    className="w-full bg-transparent border-none text-[11px] focus:ring-0 italic font-medium leading-tight resize-none h-12" 
-                    placeholder="Enter specific subject remark..."
-                    value={pupilRemarks[pupil.no]?.[s.name] || `Shows ${s.score >= 70 ? 'excellent' : s.score >= 50 ? 'satisfactory' : 'weak'} aptitude in this area.`}
+                    className="w-full bg-transparent border-none text-[10px] focus:ring-0 italic font-medium leading-relaxed resize-none h-10 outline-none" 
+                    placeholder="Subject observation..."
+                    value={pupilRemarks[pupil.no]?.[s.name] || s.remark}
                     onChange={(e) => handleSubjectRemark(s.name, e.target.value)}
                   />
                 </td>
-                <td className="p-3 border-2 border-black text-[10px] font-black uppercase text-gray-500">{s.facilitator}</td>
               </tr>
             ))}
           </tbody>
@@ -143,55 +134,54 @@ const PupilReport: React.FC<Props> = ({
 
       {/* Analysis & Summary */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-12">
-        <div className="md:col-span-2 bg-gray-100 p-6 border-l-8 border-black space-y-4">
+        <div className="md:col-span-2 bg-gray-50 p-6 border-l-8 border-[#cca43b] space-y-4">
           <div>
-            <span className="text-[10px] font-black uppercase text-gray-500 block mb-1">Top Strength Areas</span>
-            <p className="text-sm font-bold"><strong>Core:</strong> {bestCore}</p>
-            <p className="text-sm font-bold"><strong>Elective:</strong> {bestElective}</p>
+            <span className="text-[9px] font-black uppercase text-gray-400 block mb-2 tracking-widest">Strength Assessment</span>
+            <p className="text-xs font-bold uppercase text-gray-600"><strong>Core Focal Point:</strong><br/>{bestCore}</p>
+            <p className="text-xs font-bold uppercase text-gray-600 mt-2"><strong>Elective Merit:</strong><br/>{bestElective}</p>
           </div>
-          <div className="pt-4 border-t border-gray-300">
-            <span className="text-[10px] font-black uppercase text-gray-500 block mb-2">Performance Assessment</span>
-            <div className={`text-lg font-black italic ${pupil.aggregate <= 15 ? 'text-green-700' : 'text-red-700'}`}>
-              Status: {performanceStatus}
+          <div className="pt-6 border-t border-gray-200">
+            <span className="text-[9px] font-black uppercase text-gray-400 block mb-2 tracking-widest">Institutional Status</span>
+            <div className={`text-xl font-black italic tracking-tighter ${pupil.aggregate <= 15 ? 'text-green-700' : 'text-red-700'}`}>
+              {performanceStatus}
             </div>
           </div>
         </div>
-        <div className="md:col-span-3 space-y-4">
+        <div className="md:col-span-3 space-y-6">
           <div className="relative">
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">General Remarks on Performance</label>
+            <label className="text-[9px] font-black uppercase text-gray-400 block mb-1 tracking-widest">Holistic Performance Summary</label>
             <textarea 
-              className="w-full h-32 p-4 text-sm border-2 border-gray-300 rounded focus:border-black outline-none italic leading-relaxed font-serif bg-yellow-50/30"
-              value={generalRemarks[pupil.no] || `This ${schoolInfo.mockSeries} is part of the series in partial preparation for the sitting of BECE 2025/2026. Based on BECE 2024/2025 exam standards, the pupil's performance is ${performanceStatus.toLowerCase()}. This is the second of such prep sessions.`}
+              className="w-full h-32 p-5 text-xs border-2 border-gray-100 rounded-2xl focus:border-[#cca43b] outline-none italic leading-relaxed font-serif bg-yellow-50/10 shadow-inner"
+              value={generalRemarks[pupil.no] || pupil.overallRemark}
               onChange={(e) => setGeneralRemarks(prev => ({ ...prev, [pupil.no]: e.target.value }))}
             />
           </div>
           <div>
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Recommendation & Future Academic Plan</label>
-            <textarea 
-              className="w-full h-20 p-4 text-sm border-2 border-gray-300 rounded focus:border-black outline-none font-bold text-blue-900 leading-tight"
-              defaultValue={`Continue with intensive review. Focus on weak subject indicators. Attend all prep classes for BECE 2025.`}
-            />
+            <label className="text-[9px] font-black uppercase text-gray-400 block mb-1 tracking-widest">Critical Recommendation</label>
+            <div className="w-full p-4 bg-[#0f3460]/5 rounded-2xl border border-[#0f3460]/10 text-xs font-bold text-[#0f3460] leading-tight uppercase">
+               {pupil.recommendation}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Signature Section */}
-      <div className="flex justify-between items-end mt-16 pb-4">
+      <div className="flex justify-between items-end mt-16 pb-4 no-print">
         <div className="text-center w-64">
-          <div className="h-12 border-b-2 border-gray-300 w-full mb-2"></div>
-          <p className="text-[10px] font-black uppercase">Subject Facilitator</p>
+          <div className="h-10 border-b-2 border-black w-full mb-1"></div>
+          <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Subject Facilitator</p>
         </div>
         <div className="text-center w-80">
-           <div className="italic font-serif text-2xl mb-2 text-gray-800">H. Baylor</div>
-           <div className="border-t-4 border-black pt-3">
-            <p className="text-xs font-black uppercase tracking-widest">Headteacher's Authorization</p>
-            <p className="text-[9px] text-gray-400 mt-1">United Baylor Academy Official Certification</p>
+           <div className="italic font-serif text-3xl mb-1 text-[#0f3460]">H. Baylor</div>
+           <div className="border-t-4 border-black pt-2">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#0f3460]">Headteacher Certification</p>
+            <p className="text-[8px] text-gray-400 mt-1 uppercase font-bold tracking-tighter">Official United Baylor Academy Document</p>
            </div>
         </div>
       </div>
 
       <div className="absolute top-6 right-8 text-[10px] text-gray-200 font-mono no-print">
-        UBA-M2-PR-{pupil.no.toString().padStart(3, '0')}
+        VERIFYID-UBA-REP-{pupil.no.toString().padStart(4, '0')}
       </div>
     </div>
   );

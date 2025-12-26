@@ -54,26 +54,14 @@ export const LESSON_PLAN_WEIGHTS = {
 
 export function getSubjectsForDepartment(dept: string): string[] {
   if (dept === 'JHS') return [
-    "Mathematics", "English Language", "Science", "Social Studies", 
-    "Religious and Moral education", "French", "Career Technology", 
-    "Creative arts and designing", "Ghanaian Language", "Computing", "Physical Education"
+    "Social Studies", "English Language", "Science", "Mathematics",
+    "Computing", "Religious and Moral Education", "Creative Arts and Designing", "Career Technology", "French", "Ghanaian Language"
   ];
-  if (dept === 'Lower') return [
-    "Mathematics", "English Language", "Science", "History", 
-    "Our World Our People", "French", "Creative Arts", 
-    "Ghanaian Language", "I.C.T", "Physical Education"
+  if (dept === 'Lower' || dept === 'Upper') return [
+    "History", "English Language", "Science", "Mathematics",
+    "I.C.T", "Religious and Moral Education", "Creative Arts and Designing", "Creative Arts", "French", "Ghanaian Language"
   ];
-  if (dept === 'Upper') return [
-    "Mathematics", "English Language", "Science", "History", 
-    "Religious and Moral Education", "French", "Creative Arts", 
-    "Ghanaian Language", "I.C.T", "Physical Education"
-  ];
-  if (dept.includes('Basic')) return [
-    "Mathematics", "English Language", "Science", "History", 
-    "Religious and Moral education", "French", "Creative arts", 
-    "Ghanaian Language", "I.C.T", "Physical Education"
-  ];
-  if (dept === 'D&N' || dept === 'KG') return ["Language & Literacy", "Numeracy", "OWOP", "Creative Activity"];
+  if (dept === 'D&N' || dept === 'KG') return ["LANGUAGE AND LITERACY", "NUMERACY", "CREATIVE ACTIVITIES", "OUR WORLD OUR PEOPLE"];
   return ["General"];
 }
 
@@ -101,11 +89,48 @@ export const DAYCARE_PERIODS = [
 ];
 
 export const DAYCARE_ACTIVITY_GROUPS = {
-  "Language & Literacy": ["Vocabulary building", "Listening to stories", "Pre-writing skills", "Phonics awareness", "Letter recognition"],
-  "Numeracy": ["Counting 1-20", "Shape recognition", "Color sorting", "Pattern making", "Basic measurement"],
-  "Physical Development": ["Gross motor skills", "Fine motor skills", "Hand-eye coordination", "Balance and posture", "Personal hygiene"],
-  "Socio-Emotional": ["Sharing toys", "Following instructions", "Self-expression", "Empathy for others", "Cooperation in groups"],
-  "Creative Arts": ["Painting and drawing", "Music and movement", "Role play", "Molding with clay", "Rhymes and songs"]
+  "PHYSICAL DEVELOPMENT": [
+    "Enjoy Running and Climbing", "Playing with equipment", "Outdoor play / exploration", 
+    "Games", "Exploration", "Pushing & pulling", "Rolling"
+  ],
+  "HEALTH AND HYGIENE": [
+    "Indicate Toilet Needs", "Washing hands", "Wiping practices", "Grooming", "Personal hygiene"
+  ],
+  "SELF-HELP AND INDEPENDENCE": [
+    "Perform Self-Help Activities", "Dressing up", "Washing", "Shoe polishing", 
+    "Dressing skills", "Bagging", "Folding", "Sorting", "Pairing", 
+    "Setting table", "Dusting", "Arranging chairs", "Arranging learning materials"
+  ],
+  "SOCIAL AND COOPERATION": [
+    "Enjoy playing with other children", "Role play", "Playing with toys", 
+    "Waiting to go home (social patience)", "Willingly shares food", "Sharing & cooperation",
+    "Table manners", "Classroom rules"
+  ],
+  "PERFORMING AND CREATIVE ARTS": [
+    "Interest in dance, drama, social and cultural activities", "Dancing", "Action songs", 
+    "Music", "Rhymes & songs", "Painting", "Colouring", "Scribbling", 
+    "Drawing", "Moulding", "Modelling", "Weaving", "Construction"
+  ],
+  "EMOTIONAL WELLNESS": [
+    "Looks happy and cheerful during play", "Morning routines", "Conversation", "Waving"
+  ],
+  "COGNITIVE AND NUMERACY": [
+    "Identify familiar nature sounds", "Sounds of animals", "Identify mechanical sounds", 
+    "Counting 1-20", "Number Identification", "Shape recognition", "Puzzles", 
+    "Pattern Mapping", "Memory games", "Repeating Patterns"
+  ],
+  "LANGUAGE AND LITERACY": [
+    "Say and act simple nursery rhymes", "Jolly phonics drills", "Writing letters", 
+    "Tracing", "Letters & sounds", "Picture reading", "Comprehension-based writing", 
+    "Picture matching", "Picture description", "Counting words", "Naming objects", "Story time"
+  ],
+  "MONTESSORI / PRACTICAL LIFE": [
+    "Scooping", "Pouring", "Sewing", "Fetching Water"
+  ],
+  "SOCIAL & ENVIRONMENTAL AWARENESS": [
+    "Myself & My Family", "Kitchen / Home Objects", "Community Helpers", 
+    "Parts of the Body", "Environmental Exploration"
+  ]
 };
 
 export const CALENDAR_PERIODS = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7", "Week 8", "Week 9", "Week 10", "Week 11", "Week 12", "Week 13", "Week 14", "Week 15", "Week 16"];

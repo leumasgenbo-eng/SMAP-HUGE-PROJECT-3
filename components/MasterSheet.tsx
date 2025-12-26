@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Pupil, GlobalSettings } from '../types';
-import { calculateStats, getNRTGrade } from '../utils';
+import { calculateStats, getNRTGrade, calculateWeightedScore } from '../utils';
 import EditableField from './EditableField';
 
 interface Props {
@@ -14,6 +14,7 @@ interface Props {
 }
 
 const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subjectList, department, activeClass }) => {
+  const scale = settings.gradingScale || [];
   const stats = subjectList.map(subj => {
     const scores = pupils.map(p => p.scores[subj] || 0);
     return { name: subj, ...calculateStats(scores) };
@@ -28,8 +29,7 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
 
   return (
     <div className="bg-white p-4 md:p-12 shadow-2xl border border-gray-100 min-w-max animate-fadeIn">
-      {/* Standard Institutional Particulars Header */}
-      <div className="text-center mb-12 border-b-4 border-double border-[#0f3460] pb-8 flex flex-col items-center">
+      <div className="text-center mb-12 border-b-4 border-double border-[#0f3460] pb-8">
         <EditableField 
           value={settings.schoolName} 
           onSave={v => onSettingsChange({...settings, schoolName: v})} 
@@ -41,19 +41,19 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
           className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b] mb-4" 
         />
         
-        <div className="flex justify-center gap-6 text-[11px] font-black text-gray-400 uppercase tracking-widest pt-2 no-print mb-6">
+        <div className="flex justify-center gap-6 text-sm font-bold text-gray-500 mb-6">
           <div className="flex items-center gap-2">
-            <span className="text-gray-300">ADDR:</span>
-            <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
+            <span className="text-gray-300 uppercase text-[9px] font-black">Address:</span>
+            <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} className="uppercase" />
           </div>
-          <span>•</span>
+          <span>|</span>
           <div className="flex items-center gap-2">
-            <span className="text-gray-300">TEL:</span>
+            <span className="text-gray-300 uppercase text-[9px] font-black">Tel:</span>
             <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
           </div>
-          <span>•</span>
+          <span>|</span>
           <div className="flex items-center gap-2">
-            <span className="text-gray-300">EMAIL:</span>
+            <span className="text-gray-300 uppercase text-[9px] font-black">Email:</span>
             <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
           </div>
         </div>
@@ -61,11 +61,11 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
         <EditableField 
           value={displayExamTitle} 
           onSave={v => onSettingsChange({...settings, reportTitle: v})}
-          className="text-xl font-black text-[#0f3460] uppercase mb-1"
+          className="text-2xl font-black text-[#0f3460] uppercase mb-1 tracking-widest"
         />
-        <p className="text-lg font-black text-[#cca43b] uppercase mb-4 tracking-widest italic">DEPARTMENT: {department} • CLASS: {activeClass}</p>
+        <p className="text-lg font-black text-[#cca43b] uppercase mb-4 tracking-[0.2em]">CLASS: {activeClass}</p>
 
-        <div className="flex justify-center gap-10 text-[10px] font-black uppercase tracking-widest text-gray-400">
+        <div className="flex justify-center gap-10 text-[10px] font-black uppercase tracking-widest text-gray-400 no-print">
           <span>Academic Year: <EditableField value={settings.academicYear} onSave={v => onSettingsChange({...settings, academicYear: v})} className="inline-block" /></span>
           <span>{isJHS ? `Mock Series: ${settings.mockSeries}` : `Term: ${settings.currentTerm}`}</span>
           <span>Generated: {new Date().toLocaleDateString()}</span>
@@ -74,7 +74,7 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
 
       {!isEarlyChildhood ? (
         <>
-          <table className="w-full text-[10px] border-2 border-black">
+          <table className="w-full text-[10px] border-2 border-black border-collapse">
             <thead className="bg-[#f4f6f7]">
               <tr className="font-black text-[#0f3460]">
                 <th className="p-3 border border-black text-center" rowSpan={2}>RANK</th>
@@ -102,7 +102,7 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
                   {subjectList.map(subj => {
                     const s = pupil.scores[subj] || 0;
                     const stat = stats.find(st => st.name === subj)!;
-                    const gradeData = getNRTGrade(s, stat.mean, stat.stdDev);
+                    const gradeData = getNRTGrade(s, stat.mean, stat.stdDev, scale);
                     return (
                       <React.Fragment key={subj}>
                         <td className={`p-1 border border-black text-center font-bold ${s < 50 ? 'text-red-600' : 'text-green-700'}`}>{s}</td>
@@ -115,43 +115,37 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
                 </tr>
               ))}
             </tbody>
-            {pupils.length > 0 && (
-              <tfoot className="bg-yellow-50 font-black text-xs">
-                <tr>
-                  <td className="p-3 border border-black text-right uppercase" colSpan={2}>Class Average Score:</td>
-                  {stats.map(s => (
-                    <td key={s.name + '-mean'} className="p-2 border border-black text-center bg-yellow-100" colSpan={2}>{s.mean.toFixed(1)}</td>
-                  ))}
-                  <td className="p-2 border border-black text-center" colSpan={2}>-</td>
-                </tr>
-                <tr>
-                  <td className="p-3 border border-black text-right uppercase" colSpan={2}>Standard Deviation (σ):</td>
-                  {stats.map(s => (
-                    <td key={s.name + '-sd'} className="p-2 border border-black text-center" colSpan={2}>{s.stdDev.toFixed(2)}</td>
-                  ))}
-                  <td className="p-2 border border-black text-center" colSpan={2}>-</td>
-                </tr>
-              </tfoot>
-            )}
           </table>
+
+          {/* Assessment Key / Legend */}
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-10 border-t pt-8">
+             <div className="space-y-4">
+                <h4 className="text-xs font-black uppercase text-[#0f3460] tracking-widest border-b-2 border-[#cca43b] w-fit pb-1">Assessment Weighting Key</h4>
+                <div className="flex gap-6 text-[9px] font-bold text-gray-500 uppercase">
+                   <div className="flex flex-col"><span className="text-[#0f3460] font-black">Exercises</span><span>{settings.assessmentWeights.exercises}%</span></div>
+                   <div className="flex flex-col"><span className="text-[#0f3460] font-black">CAT Series</span><span>{settings.assessmentWeights.cats}%</span></div>
+                   <div className="flex flex-col"><span className="text-[#0f3460] font-black">Final Exams</span><span>{settings.assessmentWeights.terminal}%</span></div>
+                   <div className="flex flex-col border-l pl-4"><span className="text-blue-600 font-black">Combined Total</span><span>100%</span></div>
+                </div>
+             </div>
+
+             <div className="space-y-4">
+                <h4 className="text-xs font-black uppercase text-[#0f3460] tracking-widest border-b-2 border-[#cca43b] w-fit pb-1">9-Point NRT Grading Key</h4>
+                <div className="flex flex-wrap gap-2">
+                   {scale.map(g => (
+                      <div key={g.grade} className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
+                         <span className="font-black text-[10px]" style={{ color: g.color }}>{g.grade}</span>
+                         <span className="text-[8px] font-bold text-gray-400">({g.value}pt)</span>
+                         <span className="text-[8px] uppercase font-black opacity-50">{g.remark}</span>
+                      </div>
+                   ))}
+                </div>
+             </div>
+          </div>
         </>
       ) : (
-        <div className="space-y-12">
-          <p className="text-center italic text-gray-400">Please switch to Daycare Master Sheet for Early Childhood Reporting.</p>
-        </div>
+        <p className="text-center italic text-gray-400">Assessment Data for early childhood levels is formatted in the Developmental Master Sheet.</p>
       )}
-      
-      <div className="mt-16 flex justify-end">
-        <div className="text-center w-80">
-          <div className="h-20 flex items-end justify-center pb-2 italic font-serif text-3xl border-b-2 border-black text-[#0f3460]">
-             <EditableField value={settings.headteacherName} onSave={v => onSettingsChange({...settings, headteacherName: v})} className="text-center" />
-          </div>
-          <div className="pt-3">
-            <p className="font-black uppercase text-sm tracking-tighter text-[#0f3460]">HEADTEACHER'S AUTHORIZATION</p>
-            <EditableField value={settings.reportFooterText || "Official United Baylor Academy Certification"} onSave={v => onSettingsChange({...settings, reportFooterText: v})} className="text-[10px] text-gray-400 italic uppercase mt-1" />
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

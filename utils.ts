@@ -1,20 +1,8 @@
 
-import { GradingScale, Student, Pupil, GlobalSettings, FacilitatorStats, EarlyChildhoodGradeRange, EarlyChildhoodGradingConfig } from './types';
+import { GradingScale, Student, Pupil, GlobalSettings, FacilitatorStats, EarlyChildhoodGradeRange, EarlyChildhoodGradingConfig, GradingScaleEntry } from './types';
 import { CORE_SUBJECTS } from './constants';
 
-export const NRT_SCALE: GradingScale[] = [
-  { grade: "A1", value: 1, zScore: 1.645, remark: "Excellent", color: "#2e8b57" },
-  { grade: "B2", value: 2, zScore: 1.036, remark: "Very Good", color: "#3a9d6a" },
-  { grade: "B3", value: 3, zScore: 0.524, remark: "Good", color: "#45b07d" },
-  { grade: "C4", value: 4, zScore: 0.0, remark: "Credit", color: "#0f3460" },
-  { grade: "C5", value: 5, zScore: -0.524, remark: "Credit", color: "#cca43b" },
-  { grade: "C6", value: 6, zScore: -1.036, remark: "Credit", color: "#b38f32" },
-  { grade: "D7", value: 7, zScore: -1.645, remark: "Pass", color: "#e67e22" },
-  { grade: "E8", value: 8, zScore: -2.326, remark: "Pass", color: "#d35400" },
-  { grade: "F9", value: 9, zScore: -999, remark: "Fail", color: "#e74c3c" },
-];
-
-export function getDevelopmentalRating(score: number, mean: number, stdDev: number, points: 2 | 3 | 5 | 9) {
+export function getDevelopmentalRating(score: number, mean: number, stdDev: number, points: 2 | 3 | 5 | 9, scale: GradingScaleEntry[]) {
   if (stdDev <= 0) return { label: "N/A", color: "#94a3b8", value: 0 };
   const z = (score - mean) / stdDev;
 
@@ -38,7 +26,7 @@ export function getDevelopmentalRating(score: number, mean: number, stdDev: numb
     return { label: "At Risk", color: "#e74c3c", value: 1 };
   }
 
-  const gradeObj = NRT_SCALE.find(s => z >= s.zScore) || NRT_SCALE[8];
+  const gradeObj = scale.find(s => z >= s.zScore) || scale[scale.length - 1];
   return { label: gradeObj.grade, color: gradeObj.color, value: gradeObj.value };
 }
 
@@ -59,58 +47,78 @@ export function calculateStats(scores: number[]) {
   return { mean, stdDev };
 }
 
-export function getNRTGrade(score: number, mean: number, stdDev: number, customRemarks?: Record<string, string>) {
+export function getNRTGrade(score: number, mean: number, stdDev: number, scale: GradingScaleEntry[], customRemarks?: Record<string, string>) {
   if (stdDev <= 0) {
-    const defaultGrade = NRT_SCALE[3];
+    const defaultGrade = scale[Math.floor(scale.length / 2)] || scale[0];
     return { ...defaultGrade, remark: customRemarks?.[defaultGrade.grade] || defaultGrade.remark };
   }
   const z = (score - mean) / stdDev;
-  const gradeData = NRT_SCALE.find(s => z >= s.zScore) || NRT_SCALE[8];
+  const gradeData = scale.find(s => z >= s.zScore) || scale[scale.length - 1];
   return { ...gradeData, remark: customRemarks?.[gradeData.grade] || gradeData.remark };
 }
 
-export function getNextClass(current: string): string {
-  const map: Record<string, string> = {
-    'Creche': 'N1', 'N1': 'N2', 'N2': 'KG1', 'KG1': 'KG2', 'KG2': 'Basic 1',
-    'Basic 1': 'Basic 2', 'Basic 2': 'Basic 3', 'Basic 3': 'Basic 4',
-    'Basic 4': 'Basic 5', 'Basic 5': 'Basic 6', 'Basic 6': 'Basic 7',
-    'Basic 7': 'Basic 8', 'Basic 8': 'Basic 9', 'Basic 9': 'SHS Graduate'
-  };
-  return map[current] || 'Next Grade';
+export function calculateWeightedScore(student: Student, subject: string, settings: GlobalSettings): number {
+  const weights = settings.assessmentWeights || { exercises: 20, cats: 30, terminal: 50 };
+  
+  // 1. Exercises Score (Average of all CW/HW for the subject)
+  const exerciseEntries = (settings.exerciseEntries || []).filter(e => e.subject === subject);
+  const exerciseAvg = exerciseEntries.length > 0 
+    ? exerciseEntries.reduce((acc, e) => acc + ((e.pupilScores?.[student.id] || 0) / (e.maxScore || 1)), 0) / exerciseEntries.length 
+    : 0;
+  const weightedExercises = (exerciseAvg * 100) * (weights.exercises / 100);
+
+  // 2. CATs Score (Sum of CAT1, CAT2, CAT3 normalized)
+  const sbaConfig = settings.sbaConfigs[student.currentClass]?.[subject];
+  let weightedCats = 0;
+  if (sbaConfig) {
+    const cat1 = (sbaConfig.cat1.scores?.[student.id] || 0) / (sbaConfig.cat1.marks || 20);
+    const cat2 = (sbaConfig.cat2.scores?.[student.id] || 0) / (sbaConfig.cat2.marks || 20);
+    const cat3 = (sbaConfig.cat3.scores?.[student.id] || 0) / (sbaConfig.cat3.marks || 10);
+    const catAvg = (cat1 + cat2 + cat3) / 3;
+    weightedCats = (catAvg * 100) * (weights.cats / 100);
+  }
+
+  // 3. Terminal Score (From Section A + Section B)
+  const scoreDetails = student.scoreDetails?.[subject];
+  const tConfig = settings.terminalConfigs[student.currentClass] || { sectionAMax: 30, sectionBMax: 70 };
+  let weightedTerminal = 0;
+  if (scoreDetails) {
+    const rawTerminal = (scoreDetails.mockObj || 0) + (scoreDetails.mockTheory || 0);
+    const terminalMax = tConfig.sectionAMax + tConfig.sectionBMax;
+    weightedTerminal = (rawTerminal / terminalMax) * 100 * (weights.terminal / 100);
+  }
+
+  return Math.round(weightedExercises + weightedCats + weightedTerminal);
 }
 
 export function processStudentData(students: Student[], settings: GlobalSettings, subjectList: string[]): Pupil[] {
-  // Stats for Subjects
+  const scale = settings.gradingScale || [];
+  
+  // Stats for Subjects (Using Calculated Weighted Scores)
   const stats = subjectList.map(subj => {
-    const scores = students.map(s => (s.scoreDetails?.[subj]?.total || 0));
+    const scores = students.map(s => calculateWeightedScore(s, subj, settings));
     return { name: subj, ...calculateStats(scores) };
   });
 
-  // Stats for Indicators (Dev Data)
-  const indicatorStats = (settings.activeIndicators || []).reduce((acc, ind) => {
-    const scores = students.map(s => (s.scoreDetails?.[ind]?.sectionA || 0));
-    acc[ind] = calculateStats(scores).mean;
-    return acc;
-  }, {} as Record<string, number>);
-
   const pupils: Pupil[] = students.map((s, idx) => {
     const computedScores = subjectList.map(subj => {
+      const weightedTotal = calculateWeightedScore(s, subj, settings);
       const details = s.scoreDetails?.[subj] || { total: 0, facilitatorRemark: '' };
       const stat = stats.find(st => st.name === subj)!;
-      const gradeObj = getNRTGrade(details.total, stat.mean, stat.stdDev, settings.gradingSystemRemarks);
+      const gradeObj = getNRTGrade(weightedTotal, stat.mean, stat.stdDev, scale, settings.gradingSystemRemarks);
       
       return {
         name: subj,
-        score: details.total,
+        score: weightedTotal,
         grade: gradeObj.grade,
         gradeValue: gradeObj.value,
-        interpretation: gradeObj.remark, // Word interpretation
+        interpretation: gradeObj.remark,
         isCore: CORE_SUBJECTS.includes(subj),
         classAverage: stat.mean,
         facilitator: settings.facilitatorMapping?.[subj] || "N/A",
-        remark: details.facilitatorRemark || generateSubjectRemark(details.total)
+        remark: details.facilitatorRemark || generateSubjectRemark(weightedTotal)
       };
-    }).sort((a, b) => b.score - a.score); // Performance Sorting
+    }).sort((a, b) => b.score - a.score);
 
     const cores = computedScores.filter(sc => sc.isCore).sort((a, b) => a.gradeValue - b.gradeValue).slice(0, 4);
     const electives = computedScores.filter(sc => !sc.isCore).sort((a, b) => a.gradeValue - b.gradeValue).slice(0, 2);
@@ -129,21 +137,15 @@ export function processStudentData(students: Student[], settings: GlobalSettings
     const termAttendance = s.attendance?.[settings.currentTerm] || {};
     const presentCount = Object.values(termAttendance).filter(status => status === 'P').length;
 
-    // Combine subject scores and indicator scores
     const combinedScores = {
       ...subjectList.reduce((acc, subj) => {
-        acc[subj] = s.scoreDetails?.[subj]?.total || 0;
+        acc[subj] = calculateWeightedScore(s, subj, settings);
         return acc;
       }, {} as Record<string, number>),
       ...(settings.activeIndicators || []).reduce((acc, ind) => {
         acc[ind] = s.scoreDetails?.[ind]?.sectionA || 0;
         return acc;
       }, {} as Record<string, number>),
-      // Average metadata prefixing
-      ...Object.entries(indicatorStats).reduce((acc, [k, v]) => {
-        acc[`AVG_${k}`] = v;
-        return acc;
-      }, {} as Record<string, number>)
     };
 
     return {
@@ -172,23 +174,24 @@ export function processStudentData(students: Student[], settings: GlobalSettings
 
 export function calculateFacilitatorStats(students: Student[], settings: GlobalSettings, subject: string): FacilitatorStats {
   const facilitator = settings.facilitatorMapping?.[subject] || "Unknown";
-  const scores = students.map(s => s.scoreDetails?.[subject]?.total || 0);
+  const scores = students.map(s => calculateWeightedScore(s, subject, settings));
   const { mean, stdDev } = calculateStats(scores);
+  const scale = settings.gradingScale || [];
   
   const distribution: Record<string, number> = {};
-  NRT_SCALE.forEach(s => distribution[s.grade] = 0);
+  scale.forEach(s => distribution[s.grade] = 0);
 
   let totalWeightedValue = 0;
   scores.forEach(score => {
-    const gradeObj = getNRTGrade(score, mean, stdDev);
+    const gradeObj = getNRTGrade(score, mean, stdDev, scale);
     distribution[gradeObj.grade]++;
     totalWeightedValue += gradeObj.value;
   });
 
   const pupilsCount = students.length || 1;
-  const performancePercentage = (1 - (totalWeightedValue / (pupilsCount * 9))) * 100;
+  const performancePercentage = (1 - (totalWeightedValue / (pupilsCount * (scale[scale.length-1]?.value || 9)))) * 100;
   const avgGradeValue = Math.round(totalWeightedValue / pupilsCount);
-  const facilitatorGrade = NRT_SCALE.find(s => s.value === avgGradeValue)?.grade || "F9";
+  const facilitatorGrade = scale.find(s => s.value === avgGradeValue)?.grade || "F9";
 
   return { subject, facilitator, distribution, totalPupils: students.length, performancePercentage, grade: facilitatorGrade };
 }
@@ -202,3 +205,32 @@ export function getObservationRating(points: number, config: EarlyChildhoodGradi
   const range = config.ranges.find(r => points >= r.min && points <= r.max);
   return range || { label: '?', min: 0, max: 0, color: '#ccc', remark: 'Unknown' };
 }
+
+/**
+ * Fix: Added getNextClass utility to handle academic progression.
+ */
+export function getNextClass(currentClass: string): string {
+  const classes = [
+    'Creche', 'N1', 'N2', 'KG1', 'KG2',
+    'Basic 1', 'Basic 2', 'Basic 3', 'Basic 4', 'Basic 5', 'Basic 6',
+    'Basic 7', 'Basic 8', 'Basic 9'
+  ];
+  const index = classes.indexOf(currentClass);
+  if (index === -1 || index === classes.length - 1) return 'Graduated';
+  return classes[index + 1];
+}
+
+/**
+ * Fix: Exported NRT_SCALE for use in facilitator performance analytics.
+ */
+export const NRT_SCALE: GradingScaleEntry[] = [
+  { grade: "A1", value: 1, zScore: 1.645, remark: "Excellent", color: "#2e8b57" },
+  { grade: "B2", value: 2, zScore: 1.036, remark: "Very Good", color: "#3a9d6a" },
+  { grade: "B3", value: 3, zScore: 0.524, remark: "Good", color: "#45b07d" },
+  { grade: "C4", value: 4, zScore: 0.0, remark: "Credit", color: "#0f3460" },
+  { grade: "C5", value: 5, zScore: -0.524, remark: "Credit", color: "#cca43b" },
+  { grade: "C6", value: 6, zScore: -1.036, remark: "Credit", color: "#b38f32" },
+  { grade: "D7", value: 7, zScore: -1.645, remark: "Pass", color: "#e67e22" },
+  { grade: "E8", value: 8, zScore: -2.326, remark: "Pass", color: "#d35400" },
+  { grade: "F9", value: 9, zScore: -999, remark: "Fail", color: "#e74c3c" },
+];

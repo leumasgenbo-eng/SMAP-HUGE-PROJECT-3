@@ -1,4 +1,47 @@
 
+export interface GradingScaleEntry {
+  grade: string;
+  value: number;
+  zScore: number; // NRT Cut-off point
+  remark: string;
+  color: string;
+}
+
+export interface AssessmentWeights {
+  exercises: number; // e.g., 20%
+  cats: number;      // e.g., 30%
+  terminal: number;  // e.g., 50%
+}
+
+export interface TerminalConfig {
+  sectionAMax: number;
+  sectionBMax: number;
+}
+
+export interface DailyExerciseEntry {
+  id: string;
+  subject: string;
+  week: number;
+  type: 'Classwork' | 'Homework' | 'Project';
+  bloomTaxonomy: string[];
+  pupilStatus: Record<string, 'Marked' | 'Defaulter' | 'Missing'>;
+  pupilScores: Record<string, number>;
+  defaulterReasons?: Record<string, string>;
+  isDisciplinaryReferral?: boolean;
+  maxScore: number;
+  hasTestItemPrepared: boolean;
+  handwritingRating: number;
+  clarityRating: number;
+  appearanceRating: number;
+  isLateSubmission: boolean;
+  indicator?: string;
+  strand?: string;
+  subStrand?: string;
+  spellingCount?: number;
+  confirmedWithPupilId?: string;
+  date?: string;
+}
+
 export interface ParentInfo {
   name: string;
   contact: string;
@@ -43,7 +86,7 @@ export interface FilingRecord {
 export interface StaffRecord {
   id: string;
   name: string;
-  role: string; // Job Title / Position
+  role: string;
   contact: string;
   gender: 'Male' | 'Female';
   dob: string;
@@ -55,13 +98,30 @@ export interface StaffRecord {
   maritalStatus: 'Single' | 'Married' | 'Divorced' | 'Widowed';
   category: 'Teaching' | 'Non-Teaching';
   employmentType: 'Full Time' | 'Part Time' | 'Service Personnel';
+  availableDays?: string[];
   department: string;
   workArea?: string; 
-  idNumber: string; // Institutional/Staff ID
+  idNumber: string;
   identificationType: 'Ghana Card' | 'Passport' | 'Voter ID';
-  identificationNumber: string; // National ID number
+  identificationNumber: string;
   dateOfAppointment: string;
   authorizedForFinance?: boolean;
+}
+
+export interface FacilitatorComplianceLog {
+  id: string;
+  staffId: string;
+  staffName: string;
+  date: string;
+  day: string;
+  period: string;
+  subject: string;
+  class: string;
+  presenceStatus: 'Present' | 'Late' | 'Closed Early' | 'Interrupted' | 'Absent';
+  timeIn?: string;
+  timeUsed?: number;
+  lessonContent?: string;
+  interruptionReason?: string;
 }
 
 export interface StaffIdLog {
@@ -121,7 +181,7 @@ export interface TransactionAuditLog {
 
 export interface FinanceConfig {
   categories: string[];
-  classBills: Record<string, Record<string, number>>; // Class -> Category -> Amount
+  classBills: Record<string, Record<string, number>>;
   receiptMessage: string;
   taxConfig: TaxConfig;
 }
@@ -200,26 +260,27 @@ export interface GlobalSettings {
   reopeningDate: string;
   headteacherName: string;
   totalAttendance: number;
-  punctualityThreshold: string; // e.g. '08:00'
+  punctualityThreshold: string;
   modulePermissions: Record<string, boolean>;
   academicCalendar: Record<number, AcademicCalendarWeek[]>;
   daycareTimeTable: Record<string, Record<string, DaycareTimeTableSlot[]>>;
   examTimeTables: Record<string, ExamTimeTableSlot[]>;
   classTimeTables: Record<string, Record<string, string[]>>; 
-  timeTableStructures: Record<string, Record<string, TimeTableSlot[]>>; // Class -> Day -> Rows
+  timeTableStructures: Record<string, Record<string, TimeTableSlot[]>>;
   invigilators: InvigilatorEntry[];
   observers: ObserverEntry[];
   staff: StaffRecord[];
   staffIdLogs: StaffIdLog[];
   transactionAuditLogs: TransactionAuditLog[];
-  staffAttendance: Record<string, Record<string, { timeIn: string; timeOut: string; status: string }>>; // Date -> StaffID -> Log
+  facilitatorComplianceLogs: FacilitatorComplianceLog[];
+  staffAttendance: Record<string, Record<string, { timeIn: string; timeOut: string; status: string }>>;
   observationSchedule: Record<string, ObservationScheduleSlot[]>;
   activeDevelopmentIndicators: string[];
   customSubjects: string[];
   disabledSubjects: string[];
   questionBank: Record<string, Record<string, string>>;
-  teacherConstraints: Record<string, string[]>; // Subject -> ['Monday', 'Wednesday']
-  subjectDemands: Record<string, number>; // Subject -> Periods Per Week
+  teacherConstraints: Record<string, string[]>; 
+  subjectDemands: Record<string, Record<string, number>>;
   promotionConfig: {
     passCutOffGrade: number;
     exceptionalCutOffGrade: number;
@@ -244,6 +305,9 @@ export interface GlobalSettings {
     nonTeachingAreas: string[];
   };
   gradingSystemRemarks: Record<string, string>;
+  gradingScale: GradingScaleEntry[];
+  assessmentWeights: AssessmentWeights;
+  terminalConfigs: Record<string, TerminalConfig>;
   facilitatorMapping: Record<string, string>;
   submittedSubjects: string[];
   activeIndicators: string[];
@@ -289,10 +353,15 @@ export interface EarlyChildhoodGradingConfig {
 }
 
 export interface CATConfig {
+  id: string;
   date: string;
   marks: number;
   questionType: string;
   bloomTaxonomy: string[];
+  strand?: string;
+  subStrand?: string;
+  indicatorCode?: string;
+  scores?: Record<string, number>;
 }
 
 export interface SBAConfig {
@@ -413,24 +482,4 @@ export interface ObservationScheduleSlot {
   pupilGroup: string[];
   activityIndicator: string;
   status: 'Pending' | 'Completed';
-}
-
-export interface DailyExerciseEntry {
-  id: string;
-  subject: string;
-  week: number;
-  type: 'Classwork' | 'Homework' | 'Project';
-  bloomTaxonomy: string[];
-  pupilStatus: Record<string, 'Marked' | 'Defaulter' | 'Missing'>;
-  hasTestItemPrepared: boolean;
-  handwritingRating: number;
-  clarityRating: number;
-  appearanceRating: number;
-  isLateSubmission: boolean;
-  indicator?: string;
-  strand?: string;
-  subStrand?: string;
-  spellingCount?: number;
-  confirmedWithPupilId?: string;
-  date?: string;
 }
