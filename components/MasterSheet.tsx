@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Pupil, GlobalSettings } from '../types';
-import { calculateStats, getNRTGrade, calculateWeightedScore } from '../utils';
+import { calculateStats, getNRTGrade } from '../utils';
 import EditableField from './EditableField';
 
 interface Props {
@@ -29,43 +29,63 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
 
   return (
     <div className="bg-white p-4 md:p-12 shadow-2xl border border-gray-100 min-w-max animate-fadeIn">
-      <div className="text-center mb-12 border-b-4 border-double border-[#0f3460] pb-8">
-        <EditableField 
-          value={settings.schoolName} 
-          onSave={v => onSettingsChange({...settings, schoolName: v})} 
-          className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-2" 
-        />
-        <EditableField 
-          value={settings.motto} 
-          onSave={v => onSettingsChange({...settings, motto: v})} 
-          className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b] mb-4" 
-        />
-        
-        <div className="flex justify-center gap-6 text-sm font-bold text-gray-500 mb-6">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-300 uppercase text-[9px] font-black">Address:</span>
-            <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} className="uppercase" />
+      {/* Comprehensive Editable Branding Header */}
+      <div className="text-center mb-12 border-b-4 border-double border-[#0f3460] pb-8 flex flex-col items-center">
+        <div className="flex items-center gap-6 mb-6">
+          <div className="w-24 h-24 bg-gray-50 rounded-2xl border-2 border-gray-100 flex items-center justify-center overflow-hidden group relative">
+            {settings.logo ? (
+              <img src={settings.logo} className="w-full h-full object-contain" alt="Logo" />
+            ) : (
+              <span className="text-4xl">🏫</span>
+            )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center no-print">
+              <EditableField 
+                value={settings.logo} 
+                onSave={v => onSettingsChange({...settings, logo: v})} 
+                placeholder="Logo URL"
+                className="text-[8px] text-white bg-transparent border-white"
+              />
+            </div>
           </div>
-          <span>|</span>
+          <div className="flex flex-col items-center">
+            <EditableField 
+              value={settings.schoolName} 
+              onSave={v => onSettingsChange({...settings, schoolName: v})} 
+              className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-1" 
+            />
+            <EditableField 
+              value={settings.motto} 
+              onSave={v => onSettingsChange({...settings, motto: v})} 
+              className="text-[11px] font-black uppercase tracking-[0.4em] text-[#cca43b]" 
+            />
+          </div>
+        </div>
+        
+        <div className="flex justify-center gap-8 text-xs font-bold text-gray-400 uppercase tracking-widest pt-4 border-t border-gray-100 w-full max-w-4xl">
           <div className="flex items-center gap-2">
-            <span className="text-gray-300 uppercase text-[9px] font-black">Tel:</span>
+            <span className="text-[#cca43b] text-[10px]">📍</span>
+            <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[#cca43b] text-[10px]">📞</span>
             <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
           </div>
-          <span>|</span>
           <div className="flex items-center gap-2">
-            <span className="text-gray-300 uppercase text-[9px] font-black">Email:</span>
-            <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
+            <span className="text-[#cca43b] text-[10px]">✉️</span>
+            <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} className="lowercase" />
           </div>
         </div>
 
-        <EditableField 
-          value={displayExamTitle} 
-          onSave={v => onSettingsChange({...settings, reportTitle: v})}
-          className="text-2xl font-black text-[#0f3460] uppercase mb-1 tracking-widest"
-        />
-        <p className="text-lg font-black text-[#cca43b] uppercase mb-4 tracking-[0.2em]">CLASS: {activeClass}</p>
+        <div className="mt-10 space-y-2">
+          <EditableField 
+            value={displayExamTitle} 
+            onSave={v => onSettingsChange({...settings, reportTitle: v})}
+            className="text-2xl font-black text-[#0f3460] uppercase tracking-widest border-b-2 border-black/5 pb-1"
+          />
+          <p className="text-lg font-black text-[#cca43b] uppercase tracking-[0.2em]">CLASS: {activeClass}</p>
+        </div>
 
-        <div className="flex justify-center gap-10 text-[10px] font-black uppercase tracking-widest text-gray-400 no-print">
+        <div className="mt-4 flex justify-center gap-10 text-[10px] font-black uppercase tracking-widest text-gray-400 no-print bg-gray-50 px-6 py-2 rounded-full">
           <span>Academic Year: <EditableField value={settings.academicYear} onSave={v => onSettingsChange({...settings, academicYear: v})} className="inline-block" /></span>
           <span>{isJHS ? `Mock Series: ${settings.mockSeries}` : `Term: ${settings.currentTerm}`}</span>
           <span>Generated: {new Date().toLocaleDateString()}</span>
@@ -117,7 +137,6 @@ const MasterSheet: React.FC<Props> = ({ pupils, settings, onSettingsChange, subj
             </tbody>
           </table>
 
-          {/* Assessment Key / Legend */}
           <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-10 border-t pt-8">
              <div className="space-y-4">
                 <h4 className="text-xs font-black uppercase text-[#0f3460] tracking-widest border-b-2 border-[#cca43b] w-fit pb-1">Assessment Weighting Key</h4>

@@ -58,31 +58,57 @@ const SchoolFeesCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, on
           <button onClick={handleSharePDF} className="bg-[#2e8b57] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition">Share PDF</button>
         </div>
 
-        {/* Branding Header */}
-        <div className="text-center mb-6">
-          <EditableField 
-            value={settings.schoolName} 
-            onSave={v => onSettingsChange({...settings, schoolName: v})} 
-            className="text-4xl font-black text-[#0f3460] uppercase tracking-tighter" 
-          />
-          <EditableField 
-            value={settings.motto} 
-            onSave={v => onSettingsChange({...settings, motto: v})} 
-            className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b] mb-2" 
-          />
-          <div className="space-y-1 mb-4 border-b border-gray-100 pb-4">
+        {/* Polished Editable Branding Header */}
+        <div className="text-center mb-8 flex flex-col items-center">
+          <div className="flex items-center gap-6 mb-4">
+            <div className="w-20 h-20 bg-gray-50 rounded-2xl border-2 border-gray-100 flex items-center justify-center overflow-hidden group relative">
+              {settings.logo ? (
+                <img src={settings.logo} className="w-full h-full object-contain" alt="Logo" />
+              ) : (
+                <span className="text-3xl">💰</span>
+              )}
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center no-print">
+                <EditableField 
+                  value={settings.logo} 
+                  onSave={v => onSettingsChange({...settings, logo: v})} 
+                  placeholder="Logo URL"
+                  className="text-[8px] text-white bg-transparent border-white"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col items-center">
+              <EditableField 
+                value={settings.schoolName} 
+                onSave={v => onSettingsChange({...settings, schoolName: v})} 
+                className="text-4xl font-black text-[#0f3460] uppercase tracking-tighter leading-none" 
+              />
+              <EditableField 
+                value={settings.motto} 
+                onSave={v => onSettingsChange({...settings, motto: v})} 
+                className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b] mt-1" 
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1 mb-4 border-b border-gray-100 pb-4 w-full">
             <EditableField 
               value={settings.address} 
               onSave={v => onSettingsChange({...settings, address: v})} 
-              className="text-xs font-bold text-gray-500 w-full text-center uppercase"
+              className="text-xs font-black text-gray-500 w-full text-center uppercase tracking-widest"
             />
-            <div className="flex justify-center gap-4 text-[10px] font-bold text-gray-400">
-               <span>TEL: <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} className="inline-block" /></span>
-               <span>|</span>
-               <span>EMAIL: <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} className="inline-block" /></span>
+            <div className="flex justify-center gap-6 text-[10px] font-black text-gray-400 mt-2 bg-gray-50 px-6 py-1.5 rounded-full border border-gray-100">
+               <div className="flex items-center gap-1">
+                 <span className="text-[#cca43b]">📞</span>
+                 <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
+               </div>
+               <span className="text-gray-200">|</span>
+               <div className="flex items-center gap-1">
+                 <span className="text-[#cca43b]">✉️</span>
+                 <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} className="lowercase" />
+               </div>
             </div>
           </div>
-          <div className="bg-[#0f3460] text-white py-2 px-8 inline-block font-black text-xs rounded-lg uppercase tracking-widest">
+          <div className="bg-[#0f3460] text-white py-2 px-12 inline-block font-black text-xs rounded-lg uppercase tracking-widest shadow-md">
             OFFICIAL SCHOOL FEES STATUS CARD
           </div>
         </div>

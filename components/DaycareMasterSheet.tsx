@@ -96,45 +96,64 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
 
   return (
     <div className="bg-white p-6 md:p-12 shadow-2xl border border-gray-100 min-w-max animate-fadeIn overflow-x-auto">
-      {/* Institutional Particulars Header */}
+      {/* Enhanced Editable Header for Master Sheet */}
       <div className="text-center mb-12 border-b-4 border-double border-[#0f3460] pb-8 flex flex-col items-center">
-        <EditableField 
-          value={settings.schoolName} 
-          onSave={v => onSettingsChange({...settings, schoolName: v})} 
-          className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-2" 
-        />
-        <EditableField 
-          value={settings.motto} 
-          onSave={v => onSettingsChange({...settings, motto: v})} 
-          className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b] mb-4" 
-        />
+        <div className="flex items-center gap-6 mb-6">
+          <div className="w-24 h-24 bg-gray-50 rounded-2xl border-2 border-gray-100 flex items-center justify-center overflow-hidden group relative">
+            {settings.logo ? (
+              <img src={settings.logo} className="w-full h-full object-contain" alt="Logo" />
+            ) : (
+              <span className="text-4xl">👶</span>
+            )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center no-print">
+              <EditableField 
+                value={settings.logo} 
+                onSave={v => onSettingsChange({...settings, logo: v})} 
+                placeholder="Logo URL"
+                className="text-[8px] text-white bg-transparent border-white"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col items-center">
+            <EditableField 
+              value={settings.schoolName} 
+              onSave={v => onSettingsChange({...settings, schoolName: v})} 
+              className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-1" 
+            />
+            <EditableField 
+              value={settings.motto} 
+              onSave={v => onSettingsChange({...settings, motto: v})} 
+              className="text-[11px] font-black uppercase tracking-[0.4em] text-[#cca43b]" 
+            />
+          </div>
+        </div>
         
-        <div className="flex flex-col items-center gap-2 text-sm font-bold text-gray-500 mb-6">
-           <div className="flex items-center gap-2">
-             <span className="text-gray-300 uppercase text-[9px] font-black">Location:</span>
-             <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} className="uppercase" />
-           </div>
-           <div className="flex gap-6">
-             <div className="flex items-center gap-2">
-               <span className="text-gray-300 uppercase text-[9px] font-black">Contact:</span>
-               <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
-             </div>
-             <span>|</span>
-             <div className="flex items-center gap-2">
-               <span className="text-gray-300 uppercase text-[9px] font-black">Email:</span>
-               <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
-             </div>
-           </div>
+        <div className="flex justify-center gap-8 text-xs font-bold text-gray-500 uppercase tracking-widest pt-4 border-t border-gray-100 w-full max-w-5xl">
+          <div className="flex items-center gap-2">
+            <span className="text-[#cca43b] text-[10px]">📍</span>
+            <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[#cca43b] text-[10px]">📞</span>
+            <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[#cca43b] text-[10px]">✉️</span>
+            <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} className="lowercase" />
+          </div>
         </div>
 
-        <h2 className="text-2xl font-bold text-[#0f3460] uppercase tracking-widest">
-          {isDaycare ? "DAYCARE & NURSERY" : "PRESCHOOL"} MASTER BROAD SHEET
-        </h2>
-        <p className="text-lg font-black text-[#cca43b] uppercase mb-1 tracking-widest">CLASS: {activeClass}</p>
+        <div className="mt-8 space-y-2">
+          <h2 className="text-2xl font-bold text-[#0f3460] uppercase tracking-widest">
+            {isDaycare ? "DAYCARE & NURSERY" : "PRESCHOOL"} MASTER BROAD SHEET
+          </h2>
+          <p className="text-lg font-black text-[#cca43b] uppercase tracking-[0.2em]">CLASS: {activeClass}</p>
+        </div>
 
-        <div className="mt-4 flex gap-10 text-[10px] font-black uppercase tracking-widest text-gray-400">
-           <span>Academic Year: {settings.academicYear}</span>
+        <div className="mt-4 flex gap-10 text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-50 px-6 py-2 rounded-full no-print">
+           <span>Academic Year: <EditableField value={settings.academicYear} onSave={v => onSettingsChange({...settings, academicYear: v})} className="inline-block" /></span>
            <span>Term Cycle: {settings.currentTerm}</span>
+           <span>Audit Date: {new Date().toLocaleDateString()}</span>
         </div>
       </div>
 
@@ -259,7 +278,7 @@ const DaycareMasterSheet: React.FC<Props> = ({ students, settings, onSettingsCha
       <div className="hidden print:flex justify-end mt-20">
         <div className="text-center w-80">
           <div className="h-16 flex items-end justify-center pb-2 italic font-serif text-3xl border-b-2 border-black text-[#0f3460]">
-             H. Baylor
+             {settings.headteacherName}
           </div>
           <div className="pt-4">
             <p className="font-black uppercase text-sm text-[#0f3460] tracking-tighter">Institutional Authorization</p>

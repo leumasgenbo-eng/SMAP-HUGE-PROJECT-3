@@ -67,46 +67,60 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
           <button onClick={handleSharePDF} className="bg-[#2e8b57] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition">Share PDF</button>
         </div>
 
-        {/* Header */}
-        <div className="text-center border-b-4 border-black pb-4 mb-4 flex flex-col items-center">
-          <div className="w-full flex justify-between items-center mb-2">
-            <div className="w-20 h-20 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden">
+        {/* Enhanced Editable Header */}
+        <div className="text-center border-b-4 border-black pb-6 mb-6 flex flex-col items-center">
+          <div className="w-full flex justify-between items-center mb-4">
+            <div className="w-24 h-24 bg-gray-50 rounded-2xl border-2 border-gray-100 flex items-center justify-center overflow-hidden group relative">
                {settings.logo ? (
                  <img src={settings.logo} className="w-full h-full object-contain" alt="Logo" />
                ) : (
-                 <span className="text-3xl">🏫</span>
+                 <span className="text-4xl">🏫</span>
                )}
+               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center no-print">
+                <EditableField 
+                  value={settings.logo} 
+                  onSave={v => onSettingsChange({...settings, logo: v})} 
+                  placeholder="Logo URL"
+                  className="text-[8px] text-white bg-transparent border-white"
+                />
+              </div>
             </div>
             
             <div className="flex-1 px-4">
               <EditableField 
                 value={settings.schoolName} 
                 onSave={(val) => onSettingsChange({...settings, schoolName: val})}
-                className="text-4xl font-black w-full text-center uppercase tracking-widest text-[#0f3460] leading-tight"
+                className="text-5xl font-black w-full text-center uppercase tracking-widest text-[#0f3460] leading-tight"
               />
               <EditableField 
                 value={settings.motto} 
                 onSave={(val) => onSettingsChange({...settings, motto: val})}
-                className="text-[10px] font-black w-full text-center uppercase tracking-[0.3em] text-[#cca43b] mt-1"
+                className="text-[11px] font-black w-full text-center uppercase tracking-[0.3em] text-[#cca43b] mt-1"
               />
             </div>
-            <div className="w-20 opacity-0">Logo Spacing</div>
+            <div className="w-24 opacity-0">Logo Spacing</div>
           </div>
           
-          <div className="space-y-1 mb-2">
+          <div className="space-y-1 mb-4">
             <EditableField 
               value={settings.address} 
               onSave={(val) => onSettingsChange({...settings, address: val})}
-              className="text-xs font-bold text-gray-600 w-full text-center uppercase"
+              className="text-sm font-black text-gray-500 w-full text-center uppercase tracking-wider"
             />
-            <div className="flex justify-center gap-4 text-xs font-bold text-gray-400 italic">
-               <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
-               <span>|</span>
-               <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
+            <div className="flex justify-center gap-6 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2 bg-gray-50 px-4 py-1.5 rounded-full border border-gray-100">
+               <div className="flex items-center gap-1">
+                 <span className="text-[#cca43b]">📞</span>
+                 <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
+               </div>
+               <span className="text-gray-200">|</span>
+               <div className="flex items-center gap-1">
+                 <span className="text-[#cca43b]">✉️</span>
+                 <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} className="lowercase" />
+               </div>
             </div>
           </div>
           
-          <div className="bg-black text-white py-1 px-8 inline-block font-black text-sm rounded-sm uppercase tracking-widest flex items-center gap-2">
+          <div className="bg-black text-white py-1.5 px-12 inline-block font-black text-sm rounded-sm uppercase tracking-widest flex items-center gap-2 shadow-lg">
             {isJHS ? (
               <EditableField value={settings.mockSeries} onSave={v => onSettingsChange({...settings, mockSeries: v})} />
             ) : (
@@ -114,7 +128,7 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
                 TERM <EditableField 
                   value={settings.currentTerm.toString()} 
                   onSave={v => onSettingsChange({...settings, currentTerm: parseInt(v) as any || 1})} 
-                  className="bg-white/20 text-white min-w-[20px] px-1 ml-1" 
+                  className="bg-white/20 text-white min-w-[20px] px-1 ml-1 rounded" 
                 />
               </div>
             )} 
@@ -199,7 +213,7 @@ const ReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange, onStud
           )}
         </div>
 
-        {/* Grading Key - NEW */}
+        {/* Grading Key */}
         {!isWithheld && (
           <div className="mb-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
             <h5 className="text-[8px] font-black uppercase text-gray-400 mb-2 tracking-widest border-b border-gray-200 pb-1">9-Point NRT Grading & Weighting System Key</h5>
