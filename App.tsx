@@ -27,6 +27,7 @@ import LessonAssessmentDesk from './components/LessonAssessmentDesk';
 import MaterialsLogistics from './components/MaterialsLogistics';
 import AnnouncementModule from './components/AnnouncementModule';
 import ReportModule from './components/ReportModule';
+import BillSheet from './components/BillSheet';
 import { GlobalSettings, Student } from './types';
 import { processStudentData } from './utils';
 
@@ -175,7 +176,7 @@ const App: React.FC = () => {
   const classSpecificStudents = students.filter(s => s.status === 'Admitted' && s.currentClass === activeClass);
 
   const modules = [
-    'Academic Calendar', 'Pupil Management', 'Academic Reports', 'Announcements', 'Payment Point', 'Staff Management', 'Class Time Table', 
+    'Academic Calendar', 'Pupil Management', 'Academic Reports', 'Announcements', 'Payment Point', 'Bill Sheet', 'Staff Management', 'Class Time Table', 
     'Examination', 'Assessment', 'Logistics & Materials', 'Lesson Assessment Desk', 'Admin Dashboard'
   ].filter(m => settings.modulePermissions[m] !== false);
 
@@ -264,6 +265,8 @@ const App: React.FC = () => {
                 <AnnouncementModule settings={settings} onSettingsChange={setSettings} notify={notify} students={students} />
               ) : activeModule === 'Payment Point' ? (
                 <PaymentPoint students={students} onStudentsUpdate={setStudents} settings={settings} onSettingsChange={setSettings} notify={notify} />
+              ) : activeModule === 'Bill Sheet' ? (
+                <BillSheet students={classSpecificStudents} settings={settings} onSettingsChange={setSettings} notify={notify} activeClass={activeClass} />
               ) : activeModule === 'Staff Management' ? (
                 <StaffManagement settings={settings} onSettingsChange={setSettings} department={activeTab} notify={notify} />
               ) : activeModule === 'Class Time Table' ? (

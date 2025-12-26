@@ -50,13 +50,52 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
     { id: 'timeline', label: 'Academic Timeline', desc: 'Calendars and event schedules' },
   ];
 
+  // --- System Maintenance Handlers ---
+  const handleExportSettings = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settings, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `UBA_Settings_Backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    notify("System configurations exported successfully.", "success");
+  };
+
+  const handleFullBackup = () => {
+    const fullState = {
+      settings,
+      students,
+      timestamp: new Date().toISOString(),
+      version: "3.0.0"
+    };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullState, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `UBA_FULL_SYSTEM_BACKUP_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    notify("Comprehensive system backup generated.", "success");
+  };
+
+  const handleSystemReset = () => {
+    const confirmation = window.confirm("CRITICAL ACTION: This will purge all local data and reset the system to defaults. THIS CANNOT BE UNDONE unless you have a backup file. Proceed?");
+    if (confirmation) {
+      const secondCheck = window.confirm("FINAL WARNING: Clear all learner records, financial ledgers, and staff data?");
+      if (secondCheck) {
+        localStorage.clear();
+        window.location.reload();
+      }
+    }
+  };
+
   // --- Staff Merit Logic ---
   const staffMeritData = useMemo(() => {
     const teaching: any[] = [];
     const nonTeaching: any[] = [];
 
     settings.staff.forEach(staff => {
-      // 1. Attendance Metrics
       let totalDays = 0;
       let presentDays = 0;
       let lateDays = 0;
@@ -74,14 +113,11 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
       const punctualityRate = presentDays > 0 ? ((presentDays - lateDays) / presentDays) * 100 : 0;
 
       if (staff.category === 'Teaching') {
-        // 2. Teaching Quality (Lesson Assessments)
         const assessments = (settings.lessonAssessments || []).filter(a => a.teacherId === staff.id);
         const avgAuditScore = assessments.length > 0 
           ? assessments.reduce((acc, a) => acc + (a.compositeScore || 0), 0) / assessments.length 
           : 0;
 
-        // 3. Assessment Density (CW + HW)
-        // Find subjects assigned to this staff
         const subjects = Object.entries(settings.facilitatorMapping || {})
           .filter(([sub, name]) => name === staff.name)
           .map(([sub]) => sub);
@@ -89,31 +125,17 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
         const exercises = (settings.exerciseEntries || []).filter(e => subjects.includes(e.subject));
         const densityScore = exercises.length > 0 ? Math.min(100, (exercises.length / (totalDays || 1)) * 50) : 0;
 
-        // Weighted Index: Attendance (30%) + Quality Audit (40%) + Density (30%)
         const meritIndex = (attendanceRate * 0.3) + (avgAuditScore * 0.4) + (densityScore * 0.3);
 
         teaching.push({
-          id: staff.id,
-          name: staff.name,
-          role: staff.role,
-          dept: staff.department,
-          attendance: attendanceRate,
-          audit: avgAuditScore,
-          density: densityScore,
-          total: meritIndex
+          id: staff.id, name: staff.name, role: staff.role, dept: staff.department,
+          attendance: attendanceRate, audit: avgAuditScore, density: densityScore, total: meritIndex
         });
       } else {
-        // Non-Teaching Merit: Attendance (60%) + Punctuality (40%)
         const meritIndex = (attendanceRate * 0.6) + (punctualityRate * 0.4);
-        
         nonTeaching.push({
-          id: staff.id,
-          name: staff.name,
-          role: staff.role,
-          area: staff.workArea,
-          attendance: attendanceRate,
-          punctuality: punctualityRate,
-          total: meritIndex
+          id: staff.id, name: staff.name, role: staff.role, area: staff.workArea,
+          attendance: attendanceRate, punctuality: punctualityRate, total: meritIndex
         });
       }
     });
@@ -138,13 +160,9 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
         const termAttendance = s.attendance?.[settings.currentTerm] || {};
         const presentCount = Object.values(termAttendance).filter(status => status === 'P').length;
         return {
-          id: s.id,
-          name: `${s.firstName} ${s.surname}`,
-          gender: s.sex,
+          id: s.id, name: `${s.firstName} ${s.surname}`, gender: s.sex,
           enrolmentDate: s.createdAt?.split('T')[0] || 'N/A',
-          totalScore,
-          attendance: presentCount,
-          serial: s.serialId
+          totalScore, attendance: presentCount, serial: s.serialId
         };
       }).sort((a, b) => b.totalScore - a.totalScore).slice(0, 5);
       return { className, topPerformers: ranked };
@@ -219,8 +237,18 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
 
   // --- Pupil CSV Logic ---
   const handlePupilExport = () => {
-    const headers = ["FirstName", "Surname", "SerialID", "Class", "Gender", "DOB", "Status", "ParentName", "ParentContact"];
-    const rows = students.map(s => [`"${s.firstName}"`, `"${s.surname}"`, `"${s.serialId}"`, `"${s.currentClass}"`, `"${s.sex}"`, `"${s.dob}"`, `"${s.status}"`, `"${s.father?.name || ''}"`, `"${s.father?.contact || ''}"`]);
+    const headers = ["Serial ID", "First Name", "Surname", "DOB", "Sex", "Current Class", "Status", "Father Contact", "Mother Contact"];
+    const rows = students.map(s => [
+      `"${s.serialId}"`,
+      `"${s.firstName}"`,
+      `"${s.surname}"`,
+      `"${s.dob}"`,
+      `"${s.sex}"`,
+      `"${s.currentClass}"`,
+      `"${s.status}"`,
+      `"${s.father?.contact || ''}"`,
+      `"${s.mother?.contact || ''}"`
+    ]);
     const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     downloadCSV(csvContent, "UBA_Pupil_Registry.csv");
     notify("Pupil Registry Exported", "success");
@@ -237,11 +265,35 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
         const lines = text.split('\n').filter(l => l.trim().length > 0);
         const newStudents: Student[] = lines.slice(1).map(line => {
           const p = line.split(',').map(x => x.replace(/"/g, '').trim());
-          return { id: crypto.randomUUID(), firstName: p[0], surname: p[1], others: '', serialId: p[2] || `UBA-GEN-${Date.now().toString().slice(-4)}`, currentClass: p[3], classApplyingFor: p[3], sex: (p[4] as any) || 'Male', dob: p[5] || '', status: (p[6] as any) || 'Admitted', createdAt: new Date().toISOString(), admissionFeeReceipt: 'BULK', admissionFeeDate: new Date().toISOString().split('T')[0], hasSpecialNeeds: false, livesWith: 'Both Parents', father: { name: p[7] || '', contact: p[8] || '', address: '', occupation: '', education: '', religion: '', isDead: false }, mother: { name: '', contact: '', address: '', occupation: '', education: '', religion: '', isDead: false }, scoreDetails: {}, attendance: {}, lunchRegister: {}, generalRegister: {}, ledger: [], isFeesCleared: true };
+          return {
+            id: crypto.randomUUID(),
+            serialId: p[0],
+            firstName: p[1],
+            surname: p[2],
+            dob: p[3],
+            sex: (p[4] as any) || 'Male',
+            currentClass: p[5] || 'Basic 1',
+            status: (p[6] as any) || 'Admitted',
+            createdAt: new Date().toISOString(),
+            admissionFeeReceipt: '',
+            admissionFeeDate: '',
+            hasSpecialNeeds: false,
+            father: { name: '', contact: p[7] || '', occupation: '', address: '', education: '', religion: '', isDead: false },
+            mother: { name: '', contact: p[8] || '', occupation: '', address: '', education: '', religion: '', isDead: false },
+            livesWith: 'Both Parents',
+            scoreDetails: {},
+            attendance: {},
+            lunchRegister: {},
+            generalRegister: {},
+            ledger: [],
+            isFeesCleared: false
+          } as Student;
         });
         onStudentsUpdate([...students, ...newStudents]);
-        notify(`Successfully imported ${newStudents.length} learners.`, "success");
-      } catch (err) { notify("CSV Parse Error. Check headers.", "error"); }
+        notify(`Successfully imported ${newStudents.length} pupil records.`, "success");
+      } catch (err) {
+        notify("CSV Parse Error. Check headers.", "error");
+      }
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -351,81 +403,124 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
         </div>
 
         <div className="flex-1 bg-gray-50/50 p-10 min-h-[650px] overflow-y-auto">
-          {activeTab === 'staff_merit' && (
-            <div className="max-w-6xl mx-auto space-y-12 animate-fadeIn">
-               <div className="text-center space-y-2 border-b-4 border-double border-[#0f3460] pb-8">
-                  <h3 className="text-4xl font-black text-[#0f3460] uppercase tracking-tighter">Personnel Excellence Merit List</h3>
-                  <div className="flex justify-center gap-6 text-[11px] font-bold text-[#cca43b] uppercase tracking-[0.2em]">
-                     <span>Academic Year: {settings.academicYear}</span>
-                     <span>•</span>
-                     <span>Performance Analysis Cycle</span>
+          {activeTab === 'system_controls' && (
+            <div className="max-w-6xl mx-auto space-y-10 animate-fadeIn">
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                  <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100 space-y-8">
+                     <div className="border-b pb-4">
+                        <h3 className="text-xl font-black text-[#0f3460] uppercase tracking-tighter">Assessment Safeguards</h3>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">Protect Academic Integrity Ratios</p>
+                     </div>
+                     <label className={`flex items-center justify-between p-6 rounded-[2rem] border-2 transition-all cursor-pointer ${settings.sbaMarksLocked ? 'bg-red-50 border-red-500' : 'bg-gray-50 border-gray-100'}`}>
+                        <div className="space-y-1">
+                           <span className="text-sm font-black uppercase text-[#0f3460]">Lock SBA Marks Allocation</span>
+                           <p className="text-[9px] font-bold text-gray-400 italic">Prevents Subject Facilitators from altering mark weightings.</p>
+                        </div>
+                        <input type="checkbox" className="w-8 h-8 accent-red-600" checked={settings.sbaMarksLocked} onChange={e => onSettingsChange({ ...settings, sbaMarksLocked: e.target.checked })} />
+                     </label>
+                  </div>
+
+                  <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100 space-y-8">
+                     <div className="border-b pb-4">
+                        <h3 className="text-xl font-black text-[#0f3460] uppercase tracking-tighter">Master Security</h3>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">System-Wide Configuration Lockdown</p>
+                     </div>
+                     <label className={`flex items-center justify-between p-6 rounded-[2rem] border-4 transition-all cursor-pointer ${settings.globalConfigsLocked ? 'bg-black border-red-600' : 'bg-gray-50 border-gray-100'}`}>
+                        <div className="space-y-1">
+                           <span className={`text-sm font-black uppercase ${settings.globalConfigsLocked ? 'text-white' : 'text-[#0f3460]'}`}>Global Configuration Lock</span>
+                           <p className="text-[9px] font-bold text-gray-400 italic">Restricts all modifications to institutional settings.</p>
+                        </div>
+                        <input type="checkbox" className="w-10 h-10 accent-red-600" checked={settings.globalConfigsLocked} onChange={e => onSettingsChange({ ...settings, globalConfigsLocked: e.target.checked })} />
+                     </label>
                   </div>
                </div>
 
-               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                  {/* Teaching Staff Leaderboard */}
-                  <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-gray-100 flex flex-col">
-                     <div className="flex justify-between items-center mb-6">
-                        <div>
-                          <h4 className="text-xl font-black text-[#0f3460] uppercase tracking-widest">Teaching Personnel</h4>
-                          <p className="text-[9px] font-bold text-gray-400 uppercase">Attendance (30%) • Quality Audit (40%) • Density (30%)</p>
-                        </div>
-                        <span className="bg-blue-50 text-blue-700 px-4 py-1 rounded-full text-[9px] font-black uppercase">Top Performer Analysis</span>
-                     </div>
-                     <div className="space-y-4">
-                        {staffMeritData.teaching.map((s, idx) => (
-                           <div key={s.id} className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 group hover:bg-yellow-50/30 transition">
-                              <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-sm ${idx === 0 ? 'bg-yellow-400 text-white' : idx === 1 ? 'bg-gray-300 text-white' : idx === 2 ? 'bg-orange-300 text-white' : 'bg-blue-50 text-blue-400'}`}>
-                                 {idx + 1}
-                              </div>
-                              <div className="flex-1">
-                                 <h5 className="font-black text-[#0f3460] uppercase text-xs">{s.name}</h5>
-                                 <p className="text-[8px] font-bold text-gray-400 uppercase">{s.role} • {s.dept}</p>
-                                 <div className="grid grid-cols-3 gap-2 mt-2">
-                                    <div className="flex flex-col"><span className="text-[7px] text-gray-400 font-black uppercase">Presence</span><div className="h-1 bg-gray-200 rounded-full"><div className="h-full bg-green-500 rounded-full" style={{width: `${s.attendance}%`}}></div></div></div>
-                                    <div className="flex flex-col"><span className="text-[7px] text-gray-400 font-black uppercase">Quality</span><div className="h-1 bg-gray-200 rounded-full"><div className="h-full bg-[#cca43b] rounded-full" style={{width: `${s.audit}%`}}></div></div></div>
-                                    <div className="flex flex-col"><span className="text-[7px] text-gray-400 font-black uppercase">Density</span><div className="h-1 bg-gray-200 rounded-full"><div className="h-full bg-blue-500 rounded-full" style={{width: `${s.density}%`}}></div></div></div>
-                                 </div>
-                              </div>
-                              <div className="text-right">
-                                 <p className="text-2xl font-black text-[#0f3460] leading-none">{s.total.toFixed(1)}</p>
-                                 <p className="text-[7px] font-black text-[#cca43b] uppercase">Index Score</p>
-                              </div>
-                           </div>
-                        ))}
-                     </div>
+               {/* Advanced Maintenance Terminal */}
+               <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-100 space-y-8">
+                  <div className="border-b pb-4 flex justify-between items-end">
+                    <div>
+                      <h3 className="text-2xl font-black text-red-600 uppercase tracking-tighter">Advanced System Maintenance</h3>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">System Reset, Data Portability & Master Backups</p>
+                    </div>
                   </div>
 
-                  {/* Non-Teaching Leaderboard */}
-                  <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-gray-100 flex flex-col">
-                     <div className="flex justify-between items-center mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                     <div className="p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 flex flex-col justify-between hover:bg-white hover:shadow-lg transition group">
                         <div>
-                          <h4 className="text-xl font-black text-[#0f3460] uppercase tracking-widest">Support & Admin</h4>
-                          <p className="text-[9px] font-bold text-gray-400 uppercase">Attendance Fidelity (60%) • Punctuality (40%)</p>
+                           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mb-4">⚙️</div>
+                           <h4 className="font-black text-[#0f3460] uppercase text-sm">Settings Export</h4>
+                           <p className="text-[10px] text-gray-400 font-bold mt-2 leading-relaxed">Download current institutional configurations only (motto, fees, branding).</p>
                         </div>
-                        <span className="bg-orange-50 text-orange-700 px-4 py-1 rounded-full text-[9px] font-black uppercase">Professional Integrity</span>
+                        <button onClick={handleExportSettings} className="mt-6 w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] shadow-lg hover:scale-105 transition">Export JSON</button>
                      </div>
-                     <div className="space-y-4">
-                        {staffMeritData.nonTeaching.map((s, idx) => (
-                           <div key={s.id} className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 group hover:bg-yellow-50/30 transition">
-                              <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-sm ${idx === 0 ? 'bg-yellow-400 text-white' : idx === 1 ? 'bg-gray-300 text-white' : idx === 2 ? 'bg-orange-300 text-white' : 'bg-blue-50 text-blue-400'}`}>
-                                 {idx + 1}
+
+                     <div className="p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 flex flex-col justify-between hover:bg-white hover:shadow-lg transition group">
+                        <div>
+                           <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center text-2xl mb-4">📦</div>
+                           <h4 className="font-black text-[#0f3460] uppercase text-sm">Full System Backup</h4>
+                           <p className="text-[10px] text-gray-400 font-bold mt-2 leading-relaxed">Creates a comprehensive snapshot of all student records and system state.</p>
+                        </div>
+                        <button onClick={handleFullBackup} className="mt-6 w-full py-4 bg-green-600 text-white rounded-2xl font-black uppercase text-[10px] shadow-lg hover:scale-105 transition">Generate Backup</button>
+                     </div>
+
+                     <div className="p-8 bg-red-50 rounded-[2.5rem] border border-red-100 flex flex-col justify-between hover:bg-white hover:shadow-lg transition group">
+                        <div>
+                           <div className="w-12 h-12 rounded-2xl bg-red-600 text-white flex items-center justify-center text-2xl mb-4">⚠️</div>
+                           <h4 className="font-black text-red-600 uppercase text-sm">Master System Reset</h4>
+                           <p className="text-[10px] text-red-400 font-bold mt-2 leading-relaxed italic">Purge all local storage and reset to factory defaults. Dangerous action.</p>
+                        </div>
+                        <button onClick={handleSystemReset} className="mt-6 w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] shadow-lg hover:scale-105 transition">Reset Entire System</button>
+                     </div>
+                  </div>
+               </div>
+
+               {/* Facilitator Conformance Monitor */}
+               <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-100 space-y-8">
+                  <div className="border-b pb-4 flex justify-between items-end">
+                    <div>
+                      <h3 className="text-2xl font-black text-[#0f3460] uppercase tracking-tighter">Facilitator Conformance Monitor</h3>
+                      <p className="text-[10px] font-bold text-[#cca43b] uppercase tracking-widest mt-1">Assessment Density Index: (CW + HW) / Periods Assigned</p>
+                    </div>
+                    <div className="bg-[#f4f6f7] px-6 py-2 rounded-xl text-[9px] font-black uppercase text-gray-400">Target Ratio: &gt; 1.00</div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-[2rem] border border-gray-100">
+                    <table className="w-full text-left text-[11px] border-collapse">
+                      <thead className="bg-[#0f3460] text-white font-black uppercase">
+                        <tr>
+                          <th className="p-5">Subject Area</th>
+                          <th className="p-5">Facilitator</th>
+                          <th className="p-5 text-center">Density Index</th>
+                          <th className="p-5 text-center">Marks Status</th>
+                          <th className="p-5 text-center">Intervention Desk</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {facilitatorConformance.map((con, idx) => (
+                          <tr key={idx} className="border-b hover:bg-gray-50 transition">
+                            <td className="p-5 font-black uppercase text-[#0f3460]">{con.subject}</td>
+                            <td className="p-5 font-bold text-gray-500">{con.facilitator}</td>
+                            <td className="p-5 text-center">
+                              <div className="flex flex-col items-center">
+                                <span className={`text-lg font-black ${con.ratio < 0.5 ? 'text-red-600' : 'text-green-600'}`}>{con.ratio.toFixed(2)}</span>
+                                <span className="text-[7px] text-gray-400 uppercase font-black">{con.totalExercises} Exer / {con.periods} Per.</span>
                               </div>
-                              <div className="flex-1">
-                                 <h5 className="font-black text-[#0f3460] uppercase text-xs">{s.name}</h5>
-                                 <p className="text-[8px] font-bold text-gray-400 uppercase">{s.role} • {s.area}</p>
-                                 <div className="grid grid-cols-2 gap-4 mt-2">
-                                    <div className="flex flex-col"><span className="text-[7px] text-gray-400 font-black uppercase">Presence Rate</span><div className="h-1 bg-gray-200 rounded-full"><div className="h-full bg-green-500 rounded-full" style={{width: `${s.attendance}%`}}></div></div></div>
-                                    <div className="flex flex-col"><span className="text-[7px] text-gray-400 font-black uppercase">Punctuality</span><div className="h-1 bg-gray-200 rounded-full"><div className="h-full bg-orange-400 rounded-full" style={{width: `${s.punctuality}%`}}></div></div></div>
-                                 </div>
-                              </div>
-                              <div className="text-right">
-                                 <p className="text-2xl font-black text-[#0f3460] leading-none">{s.total.toFixed(1)}</p>
-                                 <p className="text-[7px] font-black text-[#cca43b] uppercase">Rel. Index</p>
-                              </div>
-                           </div>
+                            </td>
+                            <td className="p-5 text-center">
+                              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${con.isSubmitted ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700 animate-pulse'}`}>
+                                {con.isSubmitted ? 'SUBMITTED' : 'PENDING'}
+                              </span>
+                            </td>
+                            <td className="p-5 text-center">
+                               <div className="flex justify-center gap-2">
+                                  <button onClick={() => sendOfficeInvitation(con.facilitator, con.subject)} className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase hover:bg-blue-600 hover:text-white transition">Invite Office</button>
+                                  <button onClick={() => issueSubstandardQuery(con.facilitator, con.subject, con.ratio)} className="bg-red-50 text-red-700 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase hover:bg-red-600 hover:text-white transition">Issue Query</button>
+                               </div>
+                            </td>
+                          </tr>
                         ))}
-                     </div>
+                      </tbody>
+                    </table>
                   </div>
                </div>
             </div>
@@ -544,90 +639,6 @@ const AdminDashboard: React.FC<Props> = ({ section, dept, notify, settings, onSe
                           <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} className={`font-bold text-[#0f3460] text-xs bg-gray-50 p-4 rounded-2xl ${settings.globalConfigsLocked ? 'pointer-events-none opacity-50' : ''}`} />
                         </div>
                      </div>
-                  </div>
-               </div>
-            </div>
-          )}
-
-          {activeTab === 'system_controls' && (
-            <div className="max-w-6xl mx-auto space-y-10 animate-fadeIn">
-               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                  <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100 space-y-8">
-                     <div className="border-b pb-4">
-                        <h3 className="text-xl font-black text-[#0f3460] uppercase tracking-tighter">Assessment Safeguards</h3>
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">Protect Academic Integrity Ratios</p>
-                     </div>
-                     <label className={`flex items-center justify-between p-6 rounded-[2rem] border-2 transition-all cursor-pointer ${settings.sbaMarksLocked ? 'bg-red-50 border-red-500' : 'bg-gray-50 border-gray-100'}`}>
-                        <div className="space-y-1">
-                           <span className="text-sm font-black uppercase text-[#0f3460]">Lock SBA Marks Allocation</span>
-                           <p className="text-[9px] font-bold text-gray-400 italic">Prevents Subject Facilitators from altering mark weightings.</p>
-                        </div>
-                        <input type="checkbox" className="w-8 h-8 accent-red-600" checked={settings.sbaMarksLocked} onChange={e => onSettingsChange({ ...settings, sbaMarksLocked: e.target.checked })} />
-                     </label>
-                  </div>
-
-                  <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100 space-y-8">
-                     <div className="border-b pb-4">
-                        <h3 className="text-xl font-black text-[#0f3460] uppercase tracking-tighter">Master Security</h3>
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">System-Wide Configuration Lockdown</p>
-                     </div>
-                     <label className={`flex items-center justify-between p-6 rounded-[2rem] border-4 transition-all cursor-pointer ${settings.globalConfigsLocked ? 'bg-black border-red-600' : 'bg-gray-50 border-gray-100'}`}>
-                        <div className="space-y-1">
-                           <span className={`text-sm font-black uppercase ${settings.globalConfigsLocked ? 'text-white' : 'text-[#0f3460]'}`}>Global Configuration Lock</span>
-                           <p className="text-[9px] font-bold text-gray-400 italic">Restricts all modifications to institutional settings.</p>
-                        </div>
-                        <input type="checkbox" className="w-10 h-10 accent-red-600" checked={settings.globalConfigsLocked} onChange={e => onSettingsChange({ ...settings, globalConfigsLocked: e.target.checked })} />
-                     </label>
-                  </div>
-               </div>
-
-               {/* Facilitator Conformance Monitor */}
-               <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-100 space-y-8">
-                  <div className="border-b pb-4 flex justify-between items-end">
-                    <div>
-                      <h3 className="text-2xl font-black text-[#0f3460] uppercase tracking-tighter">Facilitator Conformance Monitor</h3>
-                      <p className="text-[10px] font-bold text-[#cca43b] uppercase tracking-widest mt-1">Assessment Density Index: (CW + HW) / Periods Assigned</p>
-                    </div>
-                    <div className="bg-[#f4f6f7] px-6 py-2 rounded-xl text-[9px] font-black uppercase text-gray-400">Target Ratio: &gt; 1.00</div>
-                  </div>
-
-                  <div className="overflow-x-auto rounded-[2rem] border border-gray-100">
-                    <table className="w-full text-left text-[11px] border-collapse">
-                      <thead className="bg-[#0f3460] text-white font-black uppercase">
-                        <tr>
-                          <th className="p-5">Subject Area</th>
-                          <th className="p-5">Facilitator</th>
-                          <th className="p-5 text-center">Density Index</th>
-                          <th className="p-5 text-center">Marks Status</th>
-                          <th className="p-5 text-center">Intervention Desk</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {facilitatorConformance.map((con, idx) => (
-                          <tr key={idx} className="border-b hover:bg-gray-50 transition">
-                            <td className="p-5 font-black uppercase text-[#0f3460]">{con.subject}</td>
-                            <td className="p-5 font-bold text-gray-500">{con.facilitator}</td>
-                            <td className="p-5 text-center">
-                              <div className="flex flex-col items-center">
-                                <span className={`text-lg font-black ${con.ratio < 0.5 ? 'text-red-600' : 'text-green-600'}`}>{con.ratio.toFixed(2)}</span>
-                                <span className="text-[7px] text-gray-400 uppercase font-black">{con.totalExercises} Exer / {con.periods} Per.</span>
-                              </div>
-                            </td>
-                            <td className="p-5 text-center">
-                              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${con.isSubmitted ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700 animate-pulse'}`}>
-                                {con.isSubmitted ? 'SUBMITTED' : 'PENDING'}
-                              </span>
-                            </td>
-                            <td className="p-5 text-center">
-                               <div className="flex justify-center gap-2">
-                                  <button onClick={() => sendOfficeInvitation(con.facilitator, con.subject)} className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase hover:bg-blue-600 hover:text-white transition">Invite Office</button>
-                                  <button onClick={() => issueSubstandardQuery(con.facilitator, con.subject, con.ratio)} className="bg-red-50 text-red-700 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase hover:bg-red-600 hover:text-white transition">Issue Query</button>
-                               </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
                   </div>
                </div>
             </div>
