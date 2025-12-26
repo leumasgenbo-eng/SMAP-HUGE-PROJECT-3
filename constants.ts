@@ -168,3 +168,12 @@ export const EC_DEFAULT_GRADES = {
     { label: 'A+', min: 81, max: 100, color: '#2e8b57', remark: 'Advanced' }
   ]
 };
+
+export const STANDARD_CLASS_RULES = [
+  "Listen when others are talking.",
+  "Follow directions the first time they are given.",
+  "Keep hands, feet, and objects to yourself.",
+  "Work quietly and do not disturb others.",
+  "Show respect for school property and classmates.",
+  "Always be kind and use polite language."
+];

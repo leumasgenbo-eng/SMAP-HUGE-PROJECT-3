@@ -42,6 +42,19 @@ export interface DailyExerciseEntry {
   date?: string;
 }
 
+export interface SpecialDisciplinaryLog {
+  id: string;
+  studentId: string;
+  studentName: string;
+  type: string;
+  date: string;
+  repeatCount: number;
+  correction1: string;
+  correction2: string;
+  correction3: string;
+  class: string;
+}
+
 export interface ParentInfo {
   name: string;
   contact: string;
@@ -273,6 +286,7 @@ export interface GlobalSettings {
   staffIdLogs: StaffIdLog[];
   transactionAuditLogs: TransactionAuditLog[];
   facilitatorComplianceLogs: FacilitatorComplianceLog[];
+  lessonAssessments?: LessonPlanAssessment[];
   staffAttendance: Record<string, Record<string, { timeIn: string; timeOut: string; status: string }>>;
   observationSchedule: Record<string, ObservationScheduleSlot[]>;
   activeDevelopmentIndicators: string[];
@@ -303,6 +317,7 @@ export interface GlobalSettings {
     generalRemarks: string[];
     punctualityRemarks: string[];
     nonTeachingAreas: string[];
+    classRules?: string[];
   };
   gradingSystemRemarks: Record<string, string>;
   gradingScale: GradingScaleEntry[];
@@ -312,6 +327,7 @@ export interface GlobalSettings {
   submittedSubjects: string[];
   activeIndicators: string[];
   exerciseEntries?: DailyExerciseEntry[];
+  specialDisciplinaryLogs?: SpecialDisciplinaryLog[];
   sbaConfigs: Record<string, Record<string, SBAConfig>>;
   sbaMarksLocked: boolean;
   reportTitle?: string;
@@ -373,12 +389,24 @@ export interface SBAConfig {
 export interface LessonPlanAssessment {
   id: string;
   teacherId?: string;
+  teacherName?: string;
+  staffId?: string;
+  duration?: string;
   subject?: string;
   topic?: string;
   date?: string;
   week?: number;
   strand?: string;
   subStrand?: string;
+  lessonDates?: string[]; // [L1, L2, L3, L4, L5]
+  pagesCovered?: string;
+  referenceMaterialDetail?: string;
+  isPlanLate?: boolean;
+  schemeChecks?: {
+    yearly: boolean;
+    termly: boolean;
+    weekly: boolean;
+  };
   schemeOfWorkStatus?: 'Complete' | 'Incomplete';
   referenceMaterialsCount?: number;
   scores: Record<string, number>;
@@ -403,6 +431,7 @@ export interface LessonPlanAssessment {
   };
   status: 'Draft' | 'Finalized';
   overallEvaluation?: string;
+  compositeScore?: number;
 }
 
 export interface GradingScale {

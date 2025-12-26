@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ROLES, getSubjectsForDepartment, DEPARTMENTS, CLASS_MAPPING, CALENDAR_ACTIVITIES, EXTRA_CURRICULAR, LEAD_TEAM, TLMS, REMARKS_LIST, DAYCARE_DETAILS, DAYCARE_ACTIVITY_GROUPS, EC_DEFAULT_GRADES } from './constants';
+import { ROLES, getSubjectsForDepartment, DEPARTMENTS, CLASS_MAPPING, CALENDAR_ACTIVITIES, EXTRA_CURRICULAR, LEAD_TEAM, TLMS, REMARKS_LIST, DAYCARE_DETAILS, DAYCARE_ACTIVITY_GROUPS, EC_DEFAULT_GRADES, STANDARD_CLASS_RULES } from './constants';
 import AdminDashboard from './components/AdminDashboard';
 import FacilitatorPortal from './components/FacilitatorPortal';
 import AttendanceModule from './components/AttendanceModule';
@@ -22,6 +22,7 @@ import ExaminationDesk from './components/ExaminationDesk';
 import ObservationDesk from './components/ObservationDesk';
 import AssessmentDesk from './components/AssessmentDesk';
 import PaymentPoint from './components/PaymentPoint';
+import LessonAssessmentDesk from './components/LessonAssessmentDesk';
 import { GlobalSettings, Student } from './types';
 import { processStudentData } from './utils';
 
@@ -69,6 +70,7 @@ const App: React.FC = () => {
       staffIdLogs: [],
       transactionAuditLogs: [],
       facilitatorComplianceLogs: [],
+      lessonAssessments: [],
       staffAttendance: {},
       observationSchedule: {},
       activeDevelopmentIndicators: [],
@@ -93,7 +95,8 @@ const App: React.FC = () => {
         facilitatorRemarks: ["Shows keen interest", "Consistent effort", "Requires more practice"],
         generalRemarks: ["Promoted with credit", "Needs improvement"],
         punctualityRemarks: ["Always early", "Regularly late"],
-        nonTeachingAreas: ["Accounts", "Security", "Kitchen", "Transport"]
+        nonTeachingAreas: ["Accounts", "Security", "Kitchen", "Transport"],
+        classRules: [...STANDARD_CLASS_RULES]
       },
       gradingSystemRemarks: { "A1": "Excellent", "B2": "Very Good", "B3": "Good", "C4": "Credit", "C5": "Credit", "C6": "Credit", "D7": "Pass", "E8": "Pass", "F9": "Fail" },
       gradingScale: [
@@ -164,7 +167,7 @@ const App: React.FC = () => {
 
   const modules = [
     'Academic Calendar', 'Pupil Management', 'Payment Point', 'Staff Management', 'Class Time Table', 
-    'Examination', 'Assessment', 'Admin Dashboard'
+    'Examination', 'Assessment', 'Lesson Assessment Desk', 'Admin Dashboard'
   ].filter(m => settings.modulePermissions[m] !== false);
 
   return (
@@ -260,6 +263,14 @@ const App: React.FC = () => {
                   activeClass={activeClass} 
                   department={activeTab}
                   notify={notify} 
+                />
+              ) : activeModule === 'Lesson Assessment Desk' ? (
+                <LessonAssessmentDesk
+                  settings={settings}
+                  onSettingsChange={setSettings}
+                  department={activeTab}
+                  activeClass={activeClass}
+                  notify={notify}
                 />
               ) : (
                 <GenericModule module={activeModule} department={activeTab} activeClass={activeClass} students={students} settings={settings} onSettingsChange={setSettings} onStudentUpdate={handleStudentUpdate} notify={notify} />
