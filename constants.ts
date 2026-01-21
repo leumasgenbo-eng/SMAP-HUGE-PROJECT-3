@@ -1,24 +1,23 @@
-
 export const DEPARTMENTS = [
-  { id: 'D&N', label: 'Daycare & Nursery' },
-  { id: 'KG', label: 'Kindergarten' },
-  { id: 'Lower', label: 'Lower Basic School' },
-  { id: 'Upper', label: 'Upper Basic School' },
-  { id: 'JHS', label: 'Junior High School' }
+  { id: 'Daycare', label: 'Daycare' },
+  { id: 'Kindergarten', label: 'Kindergarten' },
+  { id: 'Lower', label: 'Lower Basic' },
+  { id: 'Upper', label: 'Upper Basic' },
+  { id: 'Junior', label: 'Junior High' }
 ];
 
 export const CLASS_MAPPING: Record<string, string[]> = {
-  'D&N': ['Creche', 'N1', 'N2'],
-  'KG': ['KG1', 'KG2'],
-  'Lower': ['Basic 1', 'Basic 2', 'Basic 3'],
-  'Upper': ['Basic 4', 'Basic 5', 'Basic 6'],
-  'JHS': ['Basic 7', 'Basic 8', 'Basic 9']
+  'Daycare': ['Creche 1', 'Creche 2', 'Nursery 1', 'Nursery 2'],
+  'Kindergarten': ['Kindergarten 1', 'Kindergarten 2'],
+  'Lower': ['Basic 1A', 'Basic 1B', 'Basic 2A', 'Basic 2B', 'Basic 3A', 'Basic 3B'],
+  'Upper': ['Basic 4A', 'Basic 4B', 'Basic 5A', 'Basic 5B', 'Basic 6A', 'Basic 6B'],
+  'Junior': ['Basic 7A', 'Basic 7B', 'Basic 8A', 'Basic 8B', 'Basic 9A', 'Basic 9B']
 };
 
 export const BASIC_ROOMS = [
-  "B1 (A)", "B1 (B)", "B2 (A)", "B2 (B)", "B3 (A)", "B3 (B)",
-  "B4 (A)", "B4 (B)", "B5 (A)", "B5 (B)", "B6 (A)", "B6 (B)",
-  "B7 (A)", "B7 (B)", "B8 (A)", "B8 (B)", "B9 (A)", "B9 (B)"
+  "RM 1A", "RM 1B", "RM 2A", "RM 2B", "RM 3A", "RM 3B",
+  "RM 4A", "RM 4B", "RM 5A", "RM 5B", "RM 6A", "RM 6B",
+  "RM 7A", "RM 7B", "RM 8A", "RM 8B", "RM 9A", "RM 9B"
 ];
 
 export const EXAM_VENUES = BASIC_ROOMS;
@@ -36,24 +35,8 @@ export const SUBJECT_ORDER = ["Mathematics", "English Language", "Science", "Soc
 
 export const ELECTIVE_SUBJECTS = ["Religious and Moral education", "French", "Career Technology", "Creative arts and designing", "Ghanaian Language", "I.C.T", "Physical Education"];
 
-export const FILING_CABINET_STRUCTURE = {
-  'Academic Records': ['Terminal Reports', 'Broad Sheets', 'SBA Records'],
-  'Staff Records': ['Deployment', 'Appraisal', 'Attendance'],
-  'Student Records': ['Admission', 'Withdrawal', 'Special Needs']
-};
-
-export const DAYCARE_SUBJECTS = ["Language & Literacy", "Numeracy", "OWOP", "Creative Activity"];
-
-export const LESSON_PLAN_WEIGHTS = {
-  "Preparation": 15,
-  "Content Delivery": 35,
-  "Student Engagement": 25,
-  "Assessment & Feedback": 15,
-  "Classroom Management": 10
-};
-
 export function getSubjectsForDepartment(dept: string): string[] {
-  if (dept === 'JHS') return [
+  if (dept === 'Junior') return [
     "Social Studies", "English Language", "Science", "Mathematics",
     "Computing", "Religious and Moral Education", "Creative Arts and Designing", "Career Technology", "French", "Ghanaian Language"
   ];
@@ -61,114 +44,24 @@ export function getSubjectsForDepartment(dept: string): string[] {
     "History", "English Language", "Science", "Mathematics",
     "I.C.T", "Religious and Moral Education", "Creative Arts and Designing", "Creative Arts", "French", "Ghanaian Language"
   ];
-  if (dept === 'D&N' || dept === 'KG') return ["LANGUAGE AND LITERACY", "NUMERACY", "CREATIVE ACTIVITIES", "OUR WORLD OUR PEOPLE"];
+  if (dept === 'Daycare' || dept === 'Kindergarten') return ["LANGUAGE AND LITERACY", "NUMERACY", "CREATIVE ACTIVITIES", "OUR WORLD OUR PEOPLE"];
   return ["General"];
 }
 
-export const ATTENDANCE_KEYS = {
-  PRESENT: { code: 'P', label: 'Present', color: 'bg-green-100 text-green-800' },
-  ABSENT: { code: 'A', label: 'Absent', color: 'bg-red-100 text-red-800' },
-  PERMISSION: { code: 'W/P', label: 'With Permission', color: 'bg-blue-100 text-blue-800' }
-};
-
-export const DAYCARE_VENUES = [
-  "Main Playroom", "Sensory Garden", "Sleeping Hall", "Dining Area", "Outdoor Playground", "Music Room"
-];
-
-export const DAYCARE_PERIODS = [
-  { code: 'L0', label: 'Lesson 0', type: 'L' },
-  { code: 'L1', label: 'Lesson 1', type: 'L' },
-  { code: 'L2', label: 'Lesson 2', type: 'L' },
-  { code: 'B1', label: 'Break 1', type: 'B' },
-  { code: 'L3', label: 'Lesson 3', type: 'L' },
-  { code: 'L4', label: 'Lesson 4', type: 'L' },
-  { code: 'B2', label: 'Break 2', type: 'B' },
-  { code: 'L5', label: 'Lesson 5', type: 'L' },
-  { code: 'L6', label: 'Lesson 6', type: 'L' },
-  { code: 'L7', label: 'Lesson 7', type: 'L' }
-];
-
 export const DAYCARE_ACTIVITY_GROUPS = {
-  "PHYSICAL DEVELOPMENT": [
-    "Enjoy Running and Climbing", "Playing with equipment", "Outdoor play / exploration", 
-    "Games", "Exploration", "Pushing & pulling", "Rolling"
-  ],
-  "HEALTH AND HYGIENE": [
-    "Indicate Toilet Needs", "Washing hands", "Wiping practices", "Grooming", "Personal hygiene"
-  ],
-  "SELF-HELP AND INDEPENDENCE": [
-    "Perform Self-Help Activities", "Dressing up", "Washing", "Shoe polishing", 
-    "Dressing skills", "Bagging", "Folding", "Sorting", "Pairing", 
-    "Setting table", "Dusting", "Arranging chairs", "Arranging learning materials"
-  ],
-  "SOCIAL AND COOPERATION": [
-    "Enjoy playing with other children", "Role play", "Playing with toys", 
-    "Waiting to go home (social patience)", "Willingly shares food", "Sharing & cooperation",
-    "Table manners", "Classroom rules"
-  ],
-  "PERFORMING AND CREATIVE ARTS": [
-    "Interest in dance, drama, social and cultural activities", "Dancing", "Action songs", 
-    "Music", "Rhymes & songs", "Painting", "Colouring", "Scribbling", 
-    "Drawing", "Moulding", "Modelling", "Weaving", "Construction"
-  ],
-  "EMOTIONAL WELLNESS": [
-    "Looks happy and cheerful during play", "Morning routines", "Conversation", "Waving"
-  ],
-  "COGNITIVE AND NUMERACY": [
-    "Identify familiar nature sounds", "Sounds of animals", "Identify mechanical sounds", 
-    "Counting 1-20", "Number Identification", "Shape recognition", "Puzzles", 
-    "Pattern Mapping", "Memory games", "Repeating Patterns"
-  ],
-  "LANGUAGE AND LITERACY": [
-    "Say and act simple nursery rhymes", "Jolly phonics drills", "Writing letters", 
-    "Tracing", "Letters & sounds", "Picture reading", "Comprehension-based writing", 
-    "Picture matching", "Picture description", "Counting words", "Naming objects", "Story time"
-  ],
-  "MONTESSORI / PRACTICAL LIFE": [
-    "Scooping", "Pouring", "Sewing", "Fetching Water"
-  ],
-  "SOCIAL & ENVIRONMENTAL AWARENESS": [
-    "Myself & My Family", "Kitchen / Home Objects", "Community Helpers", 
-    "Parts of the Body", "Environmental Exploration"
-  ]
+  "PHYSICAL DEVELOPMENT": ["Running & Climbing", "Motor Skills", "Outdoor play"],
+  "HEALTH AND HYGIENE": ["Toilet Needs", "Hand Washing", "Personal hygiene"],
+  "SOCIAL & COOPERATION": ["Role play", "Sharing", "Classroom rules"],
+  "LANGUAGE & LITERACY": ["Rhymes", "Tracing", "Story time"],
+  "COGNITIVE & NUMERACY": ["Counting 1-20", "Shapes", "Puzzles"]
 };
 
 export const CALENDAR_PERIODS = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7", "Week 8", "Week 9", "Week 10", "Week 11", "Week 12", "Week 13", "Week 14", "Week 15", "Week 16"];
 export const CALENDAR_ACTIVITIES = ["Orientation", "Lesson Prep", "CAT 1", "Mid-Term", "CAT 2", "Revision", "Exams", "Vacation"];
 export const EXTRA_CURRICULAR = ["Spelling Bee", "Math Quiz", "Inter-House Sports", "Cultural Day", "Excursion"];
 export const LEAD_TEAM = ["Sir Michael", "Sir Mishael", "Madam Abigail", "Madam Lawrencia"];
-export const TLMS = ["Visual Aids", "Flashcards", "Counting Blocks", "Audio Recordings", "Digital Slides"];
+export const TLMS = ["Visual Aids", "Flashcards", "Counting Blocks", "Digital Slides"];
 export const REMARKS_LIST = ["Exceptional", "Very Good", "Satisfactory", "Needs Improvement", "At Risk"];
-export const DAYCARE_DETAILS: Record<string, string[]> = {
-  "Language & Literacy": ["Rhymes", "Storytelling", "Letter Sounds", "Tracing"],
-  "Numeracy": ["Counting", "Shapes", "Sorting", "Numbers"],
-  "OWOP": ["My Family", "My Body", "Hygiene", "Rules"],
-  "Creative": ["Painting", "Drawing", "Singing", "Dance"]
-};
-export const DAYCARE_SLOTS = [
-  { code: 'D1', time: '08:00-08:30', activity: 'Arrival' },
-  { code: 'D2', time: '08:30-09:00', activity: 'Circle Time' }
-];
-export const EC_DEFAULT_GRADES = {
-  core3: [
-    { label: 'G', min: 70, max: 100, color: '#ffd700', remark: 'Gold (Exceptional)' },
-    { label: 'S', min: 40, max: 69, color: '#c0c0c0', remark: 'Silver (Satisfactory)' },
-    { label: 'B', min: 1, max: 39, color: '#cd7f32', remark: 'Bronze (Needs Improvement)' }
-  ],
-  core5: [
-    { label: 'A', min: 80, max: 100, color: '#2e8b57', remark: 'Excellent' },
-    { label: 'B', min: 70, max: 79, color: '#3a9d6a', remark: 'Very Good' },
-    { label: 'C', min: 60, max: 69, color: '#cca43b', remark: 'Good' },
-    { label: 'D', min: 45, max: 59, color: '#e67e22', remark: 'Fair' },
-    { label: 'E', min: 0, max: 44, color: '#e74c3c', remark: 'Poor' }
-  ],
-  ind3: [
-    { label: 'D', min: 1, max: 40, color: '#e74c3c', remark: 'Developing' },
-    { label: 'A', min: 41, max: 80, color: '#cca43b', remark: 'Achieving' },
-    { label: 'A+', min: 81, max: 100, color: '#2e8b57', remark: 'Advanced' }
-  ]
-};
-
 export const STANDARD_CLASS_RULES = [
   "Listen when others are talking.",
   "Follow directions the first time they are given.",
@@ -177,3 +70,50 @@ export const STANDARD_CLASS_RULES = [
   "Show respect for school property and classmates.",
   "Always be kind and use polite language."
 ];
+export const EC_DEFAULT_GRADES = {
+  core3: [
+    { label: 'G', min: 70, max: 100, color: '#ffd700', remark: 'Gold (Exceptional)' },
+    { label: 'S', min: 40, max: 69, color: '#c0c0c0', remark: 'Silver (Satisfactory)' },
+    { label: 'B', min: 1, max: 39, color: '#cd7f32', remark: 'Bronze (Needs Improvement)' }
+  ],
+  ind3: [
+    { label: 'D', min: 1, max: 40, color: '#e74c3c', remark: 'Developing' },
+    { label: 'A', min: 41, max: 80, color: '#cca43b', remark: 'Achieving' },
+    { label: 'A+', min: 81, max: 100, color: '#2e8b57', remark: 'Advanced' }
+  ]
+};
+
+// Added missing ATTENDANCE_KEYS constant to resolve AttendanceModule errors
+export const ATTENDANCE_KEYS = {
+  P: { code: 'P', label: 'Present', color: 'bg-green-100 text-green-700' },
+  A: { code: 'A', label: 'Absent', color: 'bg-red-100 text-red-700' },
+  L: { code: 'L', label: 'Late', color: 'bg-yellow-100 text-yellow-700' },
+  E: { code: 'E', label: 'Excused', color: 'bg-blue-100 text-blue-700' },
+};
+
+// Added missing DAYCARE_PERIODS constant to resolve DaycareTimeTable and ObservationDesk errors
+export const DAYCARE_PERIODS = [
+  { code: 'L0', label: 'Arrival' },
+  { code: 'L1', label: 'Circle Time' },
+  { code: 'L2', label: 'Phonics' },
+  { code: 'L3', label: 'Learning Centre' },
+  { code: 'B1', label: 'Snack Break' },
+  { code: 'L4', label: 'Individual Activity' },
+  { code: 'L5', label: 'Story Time' },
+  { code: 'B2', label: 'Lunch Break' },
+  { code: 'L6', label: 'Group Activity' },
+  { code: 'L7', label: 'Closing' }
+];
+
+// Added missing DAYCARE_VENUES constant to resolve ObservationSchedule and ObservationDesk errors
+export const DAYCARE_VENUES = [
+  "Main Classroom", "Outdoor Playground", "Nap Room", "Dining Area", "Assembly Hall"
+];
+
+// Added missing LESSON_PLAN_WEIGHTS constant to resolve LessonPlanAssessment and LessonAssessmentDesk errors
+export const LESSON_PLAN_WEIGHTS = {
+  "Objectives & Outcomes": 25,
+  "Content Accuracy": 25,
+  "Teaching Strategies": 25,
+  "TLM Utilization": 25
+};

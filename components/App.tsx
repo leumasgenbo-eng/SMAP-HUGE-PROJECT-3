@@ -144,13 +144,12 @@ const App: React.FC = () => {
 
   const classSpecificStudents = students.filter(s => s.status === 'Admitted' && s.currentClass === activeClass);
 
-  // REORDERED MODULES: Operational modules moved up
+  // REMOVED 'Class Time Table' from modules
   const modules = [
     'Admin Dashboard', 
     'Payment Point', 
     'Bill Sheet', 
     'Staff Management', 
-    'Class Time Table', 
     'Examination', 
     'Assessment', 
     'Logistics & Materials', 
@@ -268,12 +267,6 @@ const App: React.FC = () => {
             <BillSheet students={classSpecificStudents} settings={settings} onSettingsChange={setSettings} notify={console.log} activeClass={activeClass} />
           ) : activeModule === 'Staff Management' ? (
             <StaffManagement settings={settings} onSettingsChange={setSettings} department={activeTab} notify={console.log} />
-          ) : activeModule === 'Class Time Table' ? (
-            activeTab === 'D&N' || activeTab === 'KG' ? (
-              <DaycareTimeTable settings={settings} onSettingsChange={setSettings} activeClass={activeClass} notify={console.log} />
-            ) : (
-              <GenericModule module="Class Time Table" department={activeTab} activeClass={activeClass} students={students} settings={settings} onSettingsChange={setSettings} notify={console.log} />
-            )
           ) : activeModule === 'Examination' ? (
             <ExaminationDesk 
               settings={settings} 

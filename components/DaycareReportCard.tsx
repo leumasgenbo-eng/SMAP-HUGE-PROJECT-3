@@ -1,9 +1,9 @@
-
 import React, { useMemo } from 'react';
 import { Pupil, GlobalSettings, Student } from '../types';
 import { getDaycareGrade, getObservationRating, getNextClass } from '../utils';
 import { DAYCARE_ACTIVITY_GROUPS } from '../constants';
 import EditableField from './EditableField';
+import UniversalReportHeader from './reports/UniversalReportHeader';
 
 interface Props {
   pupil: Pupil;
@@ -92,64 +92,11 @@ const DaycareReportCard: React.FC<Props> = ({ pupil, settings, onSettingsChange,
           <button onClick={handleSharePDF} className="bg-[#2e8b57] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition">Share PDF</button>
         </div>
 
-        {/* Enhanced Editable Header */}
-        <div className="text-center mb-6">
-          <div className="w-full flex justify-between items-center mb-4">
-            <div className="w-24 h-24 bg-gray-50 rounded-xl border-2 border-gray-100 flex items-center justify-center overflow-hidden group relative">
-               {settings.logo ? (
-                 <img src={settings.logo} className="w-full h-full object-contain" alt="Logo" />
-               ) : (
-                 <span className="text-4xl">👶</span>
-               )}
-               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center no-print">
-                <EditableField 
-                  value={settings.logo} 
-                  onSave={v => onSettingsChange({...settings, logo: v})} 
-                  placeholder="Logo URL"
-                  className="text-[8px] text-white bg-transparent border-white"
-                />
-              </div>
-            </div>
-            <div className="flex-1 px-4">
-              <EditableField 
-                value={settings.schoolName} 
-                onSave={v => onSettingsChange({...settings, schoolName: v})} 
-                className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-1" 
-              />
-              <EditableField 
-                value={settings.motto} 
-                onSave={v => onSettingsChange({...settings, motto: v})} 
-                className="text-[11px] font-black uppercase tracking-[0.4em] text-[#cca43b] mb-2" 
-              />
-            </div>
-            <div className="w-24 opacity-0">Logo Space</div>
-          </div>
-
-          <div className="space-y-1 mb-4">
-            <EditableField 
-              value={settings.address} 
-              onSave={v => onSettingsChange({...settings, address: v})} 
-              className="text-xs font-black text-gray-500 w-full text-center uppercase tracking-widest"
-            />
-            <div className="flex justify-center gap-6 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2 bg-gray-50 px-4 py-1 rounded-full">
-              <div className="flex items-center gap-1">
-                <span className="text-[#cca43b]">📞</span>
-                <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
-              </div>
-              <span className="text-gray-200">|</span>
-              <div className="flex items-center gap-1">
-                <span className="text-[#cca43b]">✉️</span>
-                <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} className="lowercase" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-[#0f3460] text-white py-2 px-10 inline-block font-black text-sm rounded-lg uppercase tracking-widest shadow-md">
-            <EditableField 
-              value={settings.reportTitle || "EARLY CHILDHOOD PERFORMANCE REPORT"} 
-              onSave={v => onSettingsChange({...settings, reportTitle: v})} 
-            />
-          </div>
-        </div>
+        <UniversalReportHeader 
+          settings={settings} 
+          onSettingsChange={onSettingsChange} 
+          title={settings.reportTitle || "EARLY CHILDHOOD PERFORMANCE REPORT"} 
+        />
 
         <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6 text-[11px] font-bold border-b pb-6">
           <div className="flex gap-2 items-baseline"><span className="text-gray-400 uppercase w-24">Name:</span><span className="flex-1 border-b border-black uppercase text-sm font-black">{pupil.name}</span></div>

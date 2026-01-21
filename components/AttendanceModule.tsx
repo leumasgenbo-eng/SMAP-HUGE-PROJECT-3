@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ATTENDANCE_KEYS } from '../constants';
 
@@ -26,7 +25,8 @@ const AttendanceModule: React.FC<any> = ({ dept, notify }) => {
 
       <div className="p-8">
         <div className="flex gap-2 mb-6 flex-wrap">
-          {Object.values(ATTENDANCE_KEYS).map(k => (
+          {/* Fix: Added explicit casting to any[] for Object.values(ATTENDANCE_KEYS) to resolve unknown property access errors */}
+          {(Object.values(ATTENDANCE_KEYS) as any[]).map(k => (
             <div key={k.code} className={`px-4 py-2 rounded-full text-[10px] font-black ${k.color} border border-black/5`}>
               {k.code} = {k.label}
             </div>
@@ -51,7 +51,8 @@ const AttendanceModule: React.FC<any> = ({ dept, notify }) => {
                   <td className="p-4 font-black">Sample Pupil {i}</td>
                   <td className="p-4">
                     <select className="w-full bg-transparent font-black border-b-2 border-gray-200 outline-none">
-                      {Object.values(ATTENDANCE_KEYS).map(k => <option key={k.code} value={k.code}>{k.code}</option>)}
+                      {/* Fix: Added explicit casting to any[] for Object.values(ATTENDANCE_KEYS) to resolve unknown property access errors */}
+                      {(Object.values(ATTENDANCE_KEYS) as any[]).map(k => <option key={k.code} value={k.code}>{k.code}</option>)}
                     </select>
                   </td>
                   <td className="p-4 text-center">

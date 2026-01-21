@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Pupil, GlobalSettings } from '../types';
 import EditableField from './EditableField';
@@ -47,19 +46,19 @@ const PupilReport: React.FC<Props> = ({
         <EditableField 
           value={settings.schoolName} 
           onSave={v => onSettingsChange({...settings, schoolName: v})} 
+          placeholder="School Name"
           className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-2" 
         />
         <EditableField 
           value={settings.motto} 
           onSave={v => onSettingsChange({...settings, motto: v})} 
+          placeholder="Motto"
           className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b] mb-4" 
         />
         <div className="flex justify-center gap-6 text-[11px] font-black text-gray-400 uppercase tracking-widest pt-2 w-full max-w-2xl no-print">
-          <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
-          <span>•</span>
-          <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
-          <span>•</span>
-          <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} className="lowercase" />
+          <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} placeholder="Address" />
+          <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} placeholder="Telephone" />
+          <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} placeholder="Email" className="lowercase" />
         </div>
         <div className="bg-black text-white py-2 px-10 inline-block font-black text-sm rounded-sm uppercase tracking-[0.3em] mt-6">
           {settings.mockSeries || 'TERMINAL'} INDIVIDUAL REPORT CARD
@@ -75,7 +74,7 @@ const PupilReport: React.FC<Props> = ({
           </div>
           <div className="flex justify-between items-baseline border-b border-gray-100 pb-1">
             <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Student Serial</span>
-            <span className="font-bold text-gray-600 font-mono uppercase">UBA/25/M2-{pupil.no.toString().padStart(3, '0')}</span>
+            <span className="font-bold text-gray-600 font-mono uppercase">ID-{pupil.no.toString().padStart(3, '0')}</span>
           </div>
           <div className="flex justify-between items-baseline border-b border-gray-100 pb-1">
             <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Academic Year</span>
@@ -180,17 +179,17 @@ const PupilReport: React.FC<Props> = ({
         </div>
         <div className="text-center w-80">
            <div className="italic font-serif text-3xl mb-1 text-[#0f3460]">
-             <EditableField value={settings.headteacherName} onSave={v => onSettingsChange({...settings, headteacherName: v})} className="text-center" />
+             <EditableField value={settings.headteacherName} onSave={v => onSettingsChange({...settings, headteacherName: v})} placeholder="Headteacher" className="text-center" />
            </div>
            <div className="border-t-4 border-black pt-2">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-[#0f3460]">Headteacher Certification</p>
-            <p className="text-[8px] text-gray-400 mt-1 uppercase font-bold tracking-tighter">Official United Baylor Academy Document</p>
+            <p className="text-[8px] text-gray-400 mt-1 uppercase font-bold tracking-tighter">Official Institutional Document</p>
            </div>
         </div>
       </div>
 
       <div className="absolute top-6 right-8 text-[10px] text-gray-200 font-mono no-print">
-        VERIFYID-UBA-REP-{pupil.no.toString().padStart(4, '0')}
+        VERIFYID-REP-{pupil.no.toString().padStart(4, '0')}
       </div>
     </div>
   );

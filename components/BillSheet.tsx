@@ -1,7 +1,7 @@
-
 import React, { useState, useMemo } from 'react';
 import { GlobalSettings, Student } from '../types';
 import EditableField from './EditableField';
+import UniversalReportHeader from './reports/UniversalReportHeader';
 
 interface Props {
   students: Student[];
@@ -103,17 +103,14 @@ const BillSheet: React.FC<Props> = ({ students, settings, onSettingsChange, noti
 
       <div className="hidden print:block space-y-12">
         {students.map(s => {
-           const { arrears, total, items, taxAmount } = calculateStudentBill(s);
+           const { arrears, total, items } = calculateStudentBill(s);
            return (
              <div key={s.id} className="page-break bg-white p-12 border-[12px] border-double border-[#0f3460] max-w-[210mm] mx-auto min-h-[296mm] flex flex-col font-sans">
-                <div className="text-center border-b-4 border-black pb-8 mb-8 flex flex-col items-center">
-                  <EditableField value={settings.schoolName} onSave={v => onSettingsChange({...settings, schoolName: v})} className="text-5xl font-black uppercase tracking-tighter text-[#0f3460]" />
-                  <EditableField value={settings.motto} onSave={v => onSettingsChange({...settings, motto: v})} className="text-[11px] font-black uppercase tracking-[0.4em] text-[#cca43b] mt-2" />
-                  <p className="text-sm font-black text-gray-500 uppercase tracking-widest mt-2">{settings.address}</p>
-                  <div className="bg-black text-white py-2 px-12 inline-block font-black text-sm rounded-sm uppercase tracking-[0.3em] mt-6 shadow-lg">
-                     OFFICIAL BILL SHEET
-                  </div>
-                </div>
+                <UniversalReportHeader 
+                  settings={settings} 
+                  onSettingsChange={onSettingsChange} 
+                  title="OFFICIAL BILL SHEET" 
+                />
 
                 <div className="grid grid-cols-2 gap-10 mb-8 font-black">
                    <div className="space-y-3 border-r-2 border-dashed border-gray-200 pr-10">

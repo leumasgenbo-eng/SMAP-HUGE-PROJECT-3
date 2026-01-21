@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { GlobalSettings, ExamTimeTableSlot, Student, Pupil, StaffRecord, GradingScaleEntry } from '../types';
 import { BASIC_ROOMS, getSubjectsForDepartment } from '../constants';
@@ -7,6 +6,7 @@ import MasterSheet from './MasterSheet';
 import FacilitatorDashboard from './FacilitatorDashboard';
 import { processStudentData, getNRTGrade } from '../utils';
 import EditableField from './EditableField';
+import UniversalReportHeader from './reports/UniversalReportHeader';
 
 interface Props {
   settings: GlobalSettings;
@@ -304,7 +304,7 @@ const MockExaminationDesk: React.FC<Props> = ({ settings, onSettingsChange, acti
                                <h4 className="font-black text-[#0f3460] uppercase text-sm leading-tight">{s.firstName} {s.surname}</h4>
                                <p className="text-[9px] font-bold text-gray-400 mt-1 italic uppercase">Serial: {s.serialId}</p>
                              </div>
-                             <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${s.isFeesCleared ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                             <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${s.isFeesCleared ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
                                {s.isFeesCleared ? 'Cleared' : 'Owing'}
                              </span>
                          </div>
@@ -317,16 +317,14 @@ const MockExaminationDesk: React.FC<Props> = ({ settings, onSettingsChange, acti
                 <div className="animate-fadeIn">
                    <div className="flex justify-between items-center mb-10 no-print max-w-5xl mx-auto">
                       <button onClick={() => setSelectedPupilId(null)} className="text-gray-400 font-black uppercase text-xs hover:text-[#0f3460] transition flex items-gap-2"><span>←</span> Back</button>
+                      <button onClick={() => window.print()} className="bg-[#2e8b57] text-white px-6 py-2 rounded-xl font-black uppercase text-[10px] shadow-lg">Print Report</button>
                    </div>
                    <div id="mock-report-card" className="bg-white p-12 border-[12px] border-double border-[#0f3460] max-w-[210mm] mx-auto shadow-2xl relative min-h-[296mm] flex flex-col font-sans">
-                      <div className="text-center border-b-4 border-black pb-8 mb-8 flex flex-col items-center">
-                        <h1 className="text-5xl font-black uppercase tracking-tighter text-[#0f3460]">{settings.schoolName}</h1>
-                        <p className="text-[11px] font-black uppercase tracking-[0.4em] text-[#cca43b] mt-2">{settings.motto}</p>
-                        <p className="text-sm font-black text-gray-500 uppercase tracking-widest mt-2">{settings.address}</p>
-                        <div className="bg-black text-white py-2 px-12 inline-block font-black text-sm rounded-sm uppercase tracking-[0.3em] mt-6 shadow-lg">
-                           {settings.mockSeries} PERFORMANCE RECORD
-                        </div>
-                      </div>
+                      <UniversalReportHeader 
+                        settings={settings} 
+                        onSettingsChange={onSettingsChange} 
+                        title={`${settings.mockSeries} PERFORMANCE RECORD`} 
+                      />
 
                       <div className="grid grid-cols-2 gap-10 mb-8 font-black">
                          <div className="space-y-3 border-r-2 border-dashed border-gray-200 pr-10">

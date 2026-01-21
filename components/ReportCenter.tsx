@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { GlobalSettings } from '../types';
 import EditableField from './EditableField';
+import UniversalReportHeader from './reports/UniversalReportHeader';
 
 interface Props {
   role: string;
@@ -39,28 +39,11 @@ const ReportCenter: React.FC<Props> = ({ role, notify, dept, settings, onSetting
       ) : (
         <div className="bg-white p-6 md:p-12 rounded-[3.5rem] border border-gray-100 shadow-2xl print:shadow-none animate-fadeIn overflow-x-auto">
           <div className="border-[10px] border-double border-[#0f3460] p-6 md:p-12 relative flex flex-col items-center min-w-[210mm]">
-             <div className="text-center mb-10 space-y-2">
-               <EditableField 
-                 value={settings.schoolName} 
-                 onSave={v => onSettingsChange({...settings, schoolName: v})} 
-                 className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter" 
-               />
-               <EditableField 
-                 value={settings.motto} 
-                 onSave={v => onSettingsChange({...settings, motto: v})} 
-                 className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" 
-               />
-               <div className="mt-4 text-[9px] font-black uppercase text-gray-400 flex justify-center gap-4">
-                  <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
-                  <span>•</span>
-                  <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
-                  <span>•</span>
-                  <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} className="lowercase" />
-               </div>
-               <div className="bg-black text-white py-2 px-10 inline-block font-black text-xs rounded-sm uppercase tracking-[0.3em] mt-6">
-                  {mockId.toUpperCase()} PERFORMANCE RECORD
-               </div>
-             </div>
+             <UniversalReportHeader 
+               settings={settings} 
+               onSettingsChange={onSettingsChange} 
+               title={`${mockId.toUpperCase()} PERFORMANCE RECORD`} 
+             />
 
              <div className="w-full grid grid-cols-2 gap-10 mb-8 border-b-2 border-black pb-8 font-black">
                 <div className="space-y-1">
@@ -71,7 +54,7 @@ const ReportCenter: React.FC<Props> = ({ role, notify, dept, settings, onSetting
                 <div className="text-right">
                    <p className="text-xs text-gray-400 uppercase">Academic Position</p>
                    <p className="text-4xl text-[#e74c3c]">AGGREGATE: 12</p>
-                   <p className="text-[10px] font-black uppercase text-[#cca43b] mt-1">Category: Platinum Elite ({dept})</p>
+                   <p className="text-[10px] font-black uppercase text-[#cca43b] mt-1">Category: Scholar ({dept})</p>
                 </div>
              </div>
 
@@ -107,7 +90,7 @@ const ReportCenter: React.FC<Props> = ({ role, notify, dept, settings, onSetting
                 </div>
                 <div>
                    <div className="h-10 border-b-2 border-black w-3/4 mx-auto mb-2 italic flex items-end justify-center text-xl text-[#0f3460] font-serif">
-                      <EditableField value={settings.headteacherName} onSave={v => onSettingsChange({...settings, headteacherName: v})} className="text-center" />
+                      <EditableField value={settings.headteacherName} onSave={v => onSettingsChange({...settings, headteacherName: v})} placeholder="Headteacher" className="text-center" />
                    </div>
                    Headteacher
                 </div>
