@@ -77,30 +77,9 @@ const MaterialsLogistics: React.FC<Props> = ({ settings, onSettingsChange, activ
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Institutional Branding Header */}
-      <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-4 no-print">
-        <EditableField 
-          value={settings.schoolName} 
-          onSave={v => onSettingsChange({...settings, schoolName: v})} 
-          className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter" 
-        />
-        <EditableField 
-          value={settings.motto} 
-          onSave={v => onSettingsChange({...settings, motto: v})} 
-          className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" 
-        />
-        <div className="flex justify-center gap-6 text-[11px] font-black text-gray-400 uppercase tracking-widest pt-2 border-t border-gray-50 w-full max-w-2xl">
-          <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
-          <span>•</span>
-          <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
-          <span>•</span>
-          <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
-        </div>
-      </div>
-
-      <div className="bg-[#0f3460] p-8 rounded-[3rem] text-white flex justify-between items-center shadow-xl no-print">
+      <div className="bg-[#0f3460] p-8 rounded-[2rem] text-white flex justify-between items-center shadow-xl no-print">
         <div>
-          <h2 className="text-3xl font-black uppercase tracking-tighter">Logistics & Materials Desk</h2>
+          <h2 className="text-2xl font-black uppercase tracking-tighter">Logistics & Materials Desk</h2>
           <p className="text-[10px] font-bold text-[#cca43b] uppercase tracking-widest mt-1">Resource Distribution • Class: {activeClass}</p>
         </div>
         <div className="flex gap-2 bg-white/10 p-1.5 rounded-2xl">
@@ -261,7 +240,6 @@ const MaterialsLogistics: React.FC<Props> = ({ settings, onSettingsChange, activ
         )}
       </div>
 
-      {/* Processing Modal */}
       {selectedRequest && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center bg-[#0f3460]/90 backdrop-blur-md p-6">
           <div className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl p-10 space-y-8 border-t-8 border-[#cca43b]">

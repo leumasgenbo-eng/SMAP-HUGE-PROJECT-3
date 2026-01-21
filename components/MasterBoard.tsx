@@ -3,7 +3,7 @@ import React from 'react';
 import { Pupil, GlobalSettings } from '../types';
 import { SUBJECT_ORDER } from '../constants';
 import { calculateStats, getNRTGrade } from '../utils';
-import EditableField from './EditableField';
+import InstitutionalHeader from './InstitutionalHeader';
 
 interface Props {
   pupils: Pupil[];
@@ -19,31 +19,12 @@ const MasterBoard: React.FC<Props> = ({ pupils, settings, onSettingsChange }) =>
 
   return (
     <div className="bg-white p-4 md:p-12 shadow-2xl border border-gray-100 min-w-max animate-fadeIn">
-      <div className="text-center mb-12 border-b-4 border-double border-[#0f3460] pb-8 flex flex-col items-center">
-        <EditableField 
-          value={settings.schoolName} 
-          onSave={v => onSettingsChange({...settings, schoolName: v})} 
-          className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter mb-2" 
-        />
-        <EditableField 
-          value={settings.motto} 
-          onSave={v => onSettingsChange({...settings, motto: v})} 
-          className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b] mb-4" 
-        />
-        
-        <div className="flex justify-center gap-6 text-[11px] font-black text-gray-400 uppercase tracking-widest pt-2 border-t border-gray-50 w-full max-w-2xl no-print">
-          <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
-          <span>•</span>
-          <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
-          <span>•</span>
-          <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
-        </div>
-
-        <h2 className="mt-8 text-2xl font-black text-[#0f3460] uppercase tracking-widest">
-           MASTER EXAMINATION BOARD - {settings.mockSeries || 'TERMINAL SESSION'}
-        </h2>
-        <p className="text-[10px] font-black text-[#cca43b] uppercase mt-1 tracking-widest italic">Institutional Broad Sheet Analysis</p>
-      </div>
+      <InstitutionalHeader 
+        settings={settings} 
+        onSettingsChange={onSettingsChange} 
+        title={`MASTER EXAMINATION BOARD - ${settings.mockSeries || 'TERMINAL SESSION'}`} 
+        variant="double"
+      />
 
       <div className="max-w-xl mx-auto mb-8 no-print bg-gray-50 p-8 rounded-[2.5rem] border border-gray-100 text-center">
         <div className="space-y-2">
@@ -82,7 +63,6 @@ const MasterBoard: React.FC<Props> = ({ pupils, settings, onSettingsChange }) =>
               {SUBJECT_ORDER.map(subj => {
                 const s = pupil.scores[subj] || 0;
                 const subjStats = stats.find(st => st.name === subj)!;
-                // Fix: Updated call to getNRTGrade with required settings and pupils.length (classSize) arguments
                 const gradeData = getNRTGrade(s, subjStats.mean, subjStats.stdDev, settings.gradingScale, settings, pupils.length);
                 return (
                   <React.Fragment key={subj}>
@@ -106,14 +86,14 @@ const MasterBoard: React.FC<Props> = ({ pupils, settings, onSettingsChange }) =>
         </tbody>
       </table>
 
-      <div className="mt-16 flex justify-end no-print">
+      <div className="mt-16 flex justify-end">
         <div className="text-center w-80">
           <div className="h-16 flex items-end justify-center pb-2 italic font-serif text-3xl border-b-2 border-[#0f3460] text-[#0f3460]">
-             H. Baylor
+             {settings.headteacherName}
           </div>
           <div className="pt-3">
             <p className="font-black uppercase text-sm text-[#0f3460] tracking-tighter">HEADTEACHER'S AUTHORIZATION</p>
-            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Official United Baylor Academy Audit</p>
+            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Official Audit Seal</p>
           </div>
         </div>
       </div>

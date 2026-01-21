@@ -79,9 +79,13 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
         indicatorsInGroup.forEach(ind => {
           const detail = s.scoreDetails?.[ind];
           if (detail?.dailyScores) {
-            const vals = Object.values(detail.dailyScores).map(Number);
+            const dailyScores = detail.dailyScores as Record<string, number>;
+            /* 
+             * Fix: Added explicit casting to any[] for Object.values to avoid unknown iteration errors
+             */
+            const vals = (Object.values(dailyScores) as any[]).map(Number);
             if (vals.length > 0) {
-              totalVal += vals.reduce((a, b) => a + b, 0) / vals.length;
+              totalVal += vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
               count++;
             }
           }
@@ -103,7 +107,10 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
       if (s.id === studentId) {
         const currentDetails = s.scoreDetails?.[indicator] || { total: 0, grade: '', facilitatorRemark: '', dailyScores: {} };
         const newDailyScores = { ...(currentDetails.dailyScores || {}), [date]: score };
-        const scores = Object.values(newDailyScores).map(v => Number(v));
+        /* 
+         * Fix: Cast Object.values to any[] to resolve unknown type map issues
+         */
+        const scores = (Object.values(newDailyScores) as any[]).map(v => Number(v));
         const avg = Math.round(scores.reduce((a, b) => a + b, 0) / (scores.length || 1));
         return {
           ...s,
@@ -182,28 +189,7 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Institutional Branding Header - Fully Editable Particulars */}
-      <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-4 no-print">
-        <EditableField 
-          value={settings.schoolName} 
-          onSave={v => onSettingsChange({...settings, schoolName: v})} 
-          className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter" 
-        />
-        <EditableField 
-          value={settings.motto} 
-          onSave={v => onSettingsChange({...settings, motto: v})} 
-          className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" 
-        />
-        <div className="flex justify-center gap-6 text-[11px] font-black text-gray-400 uppercase tracking-widest pt-2 border-t border-gray-50 w-full max-w-2xl">
-          <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
-          <span>•</span>
-          <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
-          <span>•</span>
-          <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} />
-        </div>
-      </div>
-
-      <div className="bg-[#0f3460] p-6 rounded-[3rem] text-white flex justify-center gap-4 no-print shadow-xl">
+      <div className="bg-[#0f3460] p-6 rounded-[2rem] text-white flex justify-center gap-4 no-print shadow-xl">
         {isDaycare && (
           <button onClick={() => setActiveHubTab('indicators')} className={`px-8 py-3 rounded-2xl text-xs font-black uppercase transition ${activeHubTab === 'indicators' ? 'bg-[#cca43b] text-[#0f3460] shadow-lg' : 'bg-white/10 hover:bg-white/20'}`}>Indicator Terminal</button>
         )}
@@ -263,7 +249,7 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                           </thead>
                           <tbody>
                              {classStudents.map(s => (
-                                <tr key={s.id} className="border-b hover:bg-yellow-50 transition border-gray-50">
+                                <tr key={s.id} className="border-b hover:bg-yellow-50 transition border-gray-100">
                                    <td className="p-6 font-black uppercase text-[#0f3460] bg-white sticky left-0 z-10 border-r">{s.firstName} {s.surname}</td>
                                    {currentIndicators.map(ind => {
                                       const score = s.scoreDetails?.[ind]?.dailyScores?.[date] || 0;
@@ -271,7 +257,7 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                                          <td key={ind} className={`p-4 text-center border-x border-gray-50 ${selectedSubActivity === ind ? 'bg-[#cca43b]/5' : ''}`}>
                                             <div className="flex gap-1 justify-center">
                                                {[1, 2, 3].map(v => (
-                                                  <button key={v} onClick={() => handleIndicatorScore(s.id, ind, v)} className={`w-8 h-8 rounded-lg text-[9px] font-black transition-all ${score === v ? (v === 3 ? 'bg-green-600 text-white' : v === 2 ? 'bg-[#cca43b] text-white' : 'bg-red-500 text-white') : 'bg-gray-100 text-gray-300'}`}>
+                                                  <button key={v} onClick={() => handleIndicatorScore(s.id, ind, v)} className={`w-8 h-8 rounded-lg text-[9px] font-black transition-all ${score === v ? (v === 3 ? 'bg-green-600 text-white' : v === 2 ? 'bg-[#cca43b] text-white' : 'bg-red-50 text-white') : 'bg-gray-100 text-gray-300'}`}>
                                                      {v === 3 ? 'A+' : v === 2 ? 'A' : 'D'}
                                                   </button>
                                                ))}
@@ -355,8 +341,11 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                          </thead>
                          <tbody>
                             {groupSummaryData?.studentAverages.map(sa => {
-                               const validAvgs = Object.values(sa.avgs).filter(v => v > 0);
-                               const studentTotalAvg = validAvgs.length > 0 ? validAvgs.reduce((a, b) => a + b, 0) / validAvgs.length : 0;
+                               /* 
+                                * Fix: Cast result of Object.values to number[] to resolve unknown type issues in reduction and comparison
+                                */
+                               const validAvgs = (Object.values(sa.avgs) as number[]).filter(v => (v as number) > 0);
+                               const studentTotalAvg = validAvgs.length > 0 ? (validAvgs as number[]).reduce<number>((a, b) => (a as number) + (b as number), 0) / validAvgs.length : 0;
                                return (
                                   <tr key={sa.id} className="border-b hover:bg-blue-50/20 transition group">
                                      <td className="p-8 font-black uppercase text-[#0f3460] bg-white sticky left-0 z-10 border-r">{sa.name}</td>
@@ -366,7 +355,10 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                                         const rating = getDevelopmentalRating(avg * 33.3, stats.mean * 33.3, stats.stdDev * 33.3, 3, settings.gradingScale);
                                         return (
                                            <td key={gn} className="p-4 text-center border-x border-gray-50">
-                                              {avg > 0 ? (
+                                              {/* 
+                                               * Fix: Explicit casting of 'avg' to number for reliable comparison
+                                               */}
+                                              {(avg as number) > 0 ? (
                                                 <div className="flex flex-col items-center gap-1">
                                                    <span className="font-black text-lg text-[#0f3460]">{avg.toFixed(1)}</span>
                                                    <span className="px-2 py-0.5 rounded-full text-white text-[7px] font-black uppercase shadow-sm" style={{ background: rating.color }}>{rating.label}</span>
@@ -375,7 +367,12 @@ const AssessmentDesk: React.FC<Props> = ({ settings, onSettingsChange, students,
                                            </td>
                                         );
                                      })}
-                                     <td className="p-8 text-center bg-yellow-50/50 font-black text-2xl text-[#cca43b]">{studentTotalAvg > 0 ? studentTotalAvg.toFixed(2) : '--'}</td>
+                                     <td className="p-8 text-center bg-yellow-50/50 font-black text-2xl text-[#cca43b]">
+                                        {/* 
+                                         * Fix: Added explicit casting to number for studentTotalAvg for safe comparison and method call
+                                         */}
+                                        {(studentTotalAvg as number) > 0 ? (studentTotalAvg as number).toFixed(2) : '--'}
+                                     </td>
                                   </tr>
                                );
                             })}

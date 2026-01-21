@@ -1,4 +1,13 @@
 
+export interface CloudSyncLog {
+  id: string;
+  timestamp: string;
+  type: 'PUSH' | 'PULL';
+  status: 'Success' | 'Failure';
+  recordsProcessed: number;
+  details: string;
+}
+
 export interface Announcement {
   id: string;
   title: string;
@@ -414,6 +423,9 @@ export interface GlobalSettings {
   financeConfig: FinanceConfig;
   scienceThreshold: number;
   distributionModel: 'Auto' | 'Normal' | 'T-Dist';
+  lastCloudSync?: string;
+  cloudSyncLogs?: CloudSyncLog[];
+  syncEndpoint?: string;
 }
 
 export interface Pupil {

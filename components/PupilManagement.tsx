@@ -34,7 +34,6 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
   const approvalPool = students.filter(s => s.status === 'Results Ready');
   const classList = enrolled.filter(s => s.currentClass === activeClass);
 
-  // Determine current department for assessment bank
   const currentDeptId = useMemo(() => {
     for (const [dept, classes] of Object.entries(CLASS_MAPPING)) {
       if (classes.includes(activeClass)) return dept;
@@ -88,7 +87,10 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
         return { 
           ...s, 
           status: 'Admitted', 
-          serialId: `UBA-${s.currentClass.replace(/\s/g, '')}-${Date.now().toString().slice(-3)}`
+          /* 
+           * Fix: Using String() wrapper for replace on currentClass to avoid unknown type error
+           */
+          serialId: `UBA-${String(s.currentClass).replace(/\s/g, '')}-${Date.now().toString().slice(-3)}`
         };
       }
       return s;
@@ -108,10 +110,12 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
     }));
   };
 
-  // --- Assessment Question Management ---
   const handleDownloadQuestions = () => {
     const questions = settings.questionBank?.[currentDeptId]?.[activeAssessmentSet] || {};
-    const rows = Object.entries(questions).map(([id, text]) => [`"${id}"`, `"${text.replace(/"/g, '""')}"`]);
+    /* 
+     * Fix: Explicitly cast Object.entries to [string, string][] to ensure text is string
+     */
+    const rows = (Object.entries(questions) as [string, string][]).map(([id, text]) => [`"${id}"`, `"${text.replace(/"/g, '""')}"`]);
     if (rows.length === 0) {
       notify(`No questions found in Set ${activeAssessmentSet} for this department.`, "error");
       return;
@@ -142,7 +146,6 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
         if (!updatedBank[currentDeptId]) updatedBank[currentDeptId] = {};
         if (!updatedBank[currentDeptId][activeAssessmentSet]) updatedBank[currentDeptId][activeAssessmentSet] = {};
 
-        // Skip header
         lines.slice(1).forEach(line => {
           const parts = line.split(',').map(p => p.replace(/"/g, '').trim());
           if (parts.length >= 2) {
@@ -162,22 +165,16 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Dynamic Header with Editable Particulars */}
-      <div className="bg-white p-8 rounded-[3rem] shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-4 no-print">
-        <EditableField value={settings.schoolName} onSave={v => onSettingsChange({...settings, schoolName: v})} className="text-4xl font-black text-[#0f3460] uppercase tracking-tighter" />
-        <EditableField value={settings.motto} onSave={v => onSettingsChange({...settings, motto: v})} className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" />
-        
-        <div className="flex bg-gray-100 p-1.5 rounded-2xl gap-2 mt-4">
-           {['application', 'assessment', 'approval', 'registry', 'registers'].map(t => (
-             <button 
-               key={t} 
-               onClick={() => setActiveTab(t as any)} 
-               className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === t ? 'bg-[#0f3460] text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
-             >
-               {t === 'application' ? '1. Admission Form' : t === 'assessment' ? '2. Assess' : t === 'approval' ? '3. Approval' : t === 'registry' ? 'School Registry' : 'Daily Registers'}
-             </button>
-           ))}
-        </div>
+      <div className="flex bg-gray-100 p-2 rounded-2xl gap-2 no-print w-fit mx-auto shadow-inner">
+          {['application', 'assessment', 'approval', 'registry', 'registers'].map(t => (
+            <button 
+              key={t} 
+              onClick={() => setActiveTab(t as any)} 
+              className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === t ? 'bg-[#0f3460] text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              {t === 'application' ? '1. Admission Form' : t === 'assessment' ? '2. Assess' : t === 'approval' ? '3. Approval' : t === 'registry' ? 'School Registry' : 'Daily Registers'}
+            </button>
+          ))}
       </div>
 
       <div className="bg-white p-10 rounded-[3rem] shadow-xl min-h-[600px] border border-gray-100">
@@ -186,7 +183,7 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
             <div className="flex justify-between items-end border-b pb-6">
               <div>
                 <h3 className="text-3xl font-black text-[#0f3460] uppercase tracking-tighter">New Admission Request</h3>
-                <p className="text-[10px] font-bold text-[#cca43b] uppercase tracking-widest mt-1">Start of Cycle: Financial & Data Capture</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 italic">Start of Cycle: Financial & Data Capture</p>
               </div>
               <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 space-y-2">
                 <label className="text-[9px] font-black text-blue-400 uppercase">Processing Fee Details</label>
@@ -246,7 +243,7 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
             <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-b pb-6">
               <div>
                 <h3 className="text-2xl font-black text-[#0f3460] uppercase">Admission Assessment Lab</h3>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Grading Entry & Question Set Management</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Grading Entry & Question Set Management</p>
               </div>
               <div className="flex flex-wrap gap-4 justify-center md:justify-end items-center">
                 <div className="flex bg-gray-50 p-1.5 rounded-2xl shadow-inner no-print">
@@ -274,7 +271,7 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-[2rem] border border-gray-100">
+            <div className="overflow-x-auto rounded-[2rem] border border-gray-100 shadow-sm">
                <table className="w-full text-left text-[11px]">
                   <thead className="bg-[#0f3460] text-white font-black uppercase">
                      <tr>
@@ -292,7 +289,10 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
                   <tbody>
                     {applicants.map(s => {
                       const scores = s.testDetails?.scores || { script: 0, oral: 0, logic: 0, spelling: 0 };
-                      const total = Object.values(scores).reduce((a,b) => a+b, 0);
+                      /* 
+                       * Fix: Added explicit casting to any[] for Object.values results and reduce type to avoid unknown comparisons
+                       */
+                      const total = (Object.values(scores) as any[]).reduce<number>((a, b) => a + (Number(b) || 0), 0);
                       return (
                         <tr key={s.id} className="border-b hover:bg-gray-50 transition">
                           <td className="p-5 font-black uppercase text-[#0f3460]">{s.firstName} {s.surname}</td>
@@ -330,7 +330,10 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                {approvalPool.map(s => {
                  const scores = s.testDetails?.scores || { script: 0, oral: 0, logic: 0, spelling: 0 };
-                 const total = Object.values(scores).reduce((a,b) => a+b, 0);
+                 /* 
+                  * Fix: Cast Object.values to any[] and reduce to number to resolve unknown comparison errors
+                  */
+                 const total = (Object.values(scores) as any[]).reduce<number>((a, b) => a + (Number(b) || 0), 0);
                  const isPass = total >= 50;
 
                  return (
@@ -400,7 +403,12 @@ const PupilManagement: React.FC<Props> = ({ students, onStudentsUpdate, settings
                       <td className="p-5 font-black uppercase text-[#0f3460]">{s.firstName} {s.surname}</td>
                       <td className="p-5 font-mono text-gray-400">{s.admissionFeeReceipt}</td>
                       <td className="p-5">{s.admissionFeeDate}</td>
-                      <td className="p-5 font-black text-[#2e8b57]">{Object.values(s.testDetails?.scores || {}).reduce((a,b)=>a+b, 0)}/100</td>
+                      <td className="p-5 font-black text-[#2e8b57]">
+                        {/* 
+                         * Fix: Cast Object.values to any[] and reduce to number to avoid unknown arithmetic operations
+                         */}
+                        {(Object.values(s.testDetails?.scores || {}) as any[]).reduce<number>((a, b) => a + (Number(b) || 0), 0)}/100
+                      </td>
                       <td className="p-5 font-mono text-gray-400 font-bold">{s.father.contact}</td>
                       <td className="p-5">
                          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[8px] font-black uppercase">OFFICIAL ENROLLED</span>

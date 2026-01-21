@@ -37,9 +37,8 @@ const ReportCenter: React.FC<Props> = ({ role, notify, dept, settings, onSetting
            <p className="text-gray-300 font-black uppercase italic tracking-widest">No Selection Active. Select an academic cycle above.</p>
         </div>
       ) : (
-        <div className="bg-white p-12 rounded-[3.5rem] border border-gray-100 shadow-2xl print:shadow-none animate-fadeIn">
-          {/* Mockup for printable report card */}
-          <div className="border-[10px] border-double border-[#0f3460] p-12 relative flex flex-col items-center">
+        <div className="bg-white p-6 md:p-12 rounded-[3.5rem] border border-gray-100 shadow-2xl print:shadow-none animate-fadeIn overflow-x-auto">
+          <div className="border-[10px] border-double border-[#0f3460] p-6 md:p-12 relative flex flex-col items-center min-w-[210mm]">
              <div className="text-center mb-10 space-y-2">
                <EditableField 
                  value={settings.schoolName} 
@@ -51,6 +50,13 @@ const ReportCenter: React.FC<Props> = ({ role, notify, dept, settings, onSetting
                  onSave={v => onSettingsChange({...settings, motto: v})} 
                  className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" 
                />
+               <div className="mt-4 text-[9px] font-black uppercase text-gray-400 flex justify-center gap-4">
+                  <EditableField value={settings.address} onSave={v => onSettingsChange({...settings, address: v})} />
+                  <span>•</span>
+                  <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} />
+                  <span>•</span>
+                  <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} className="lowercase" />
+               </div>
                <div className="bg-black text-white py-2 px-10 inline-block font-black text-xs rounded-sm uppercase tracking-[0.3em] mt-6">
                   {mockId.toUpperCase()} PERFORMANCE RECORD
                </div>
@@ -100,7 +106,9 @@ const ReportCenter: React.FC<Props> = ({ role, notify, dept, settings, onSetting
                    Subject Teacher
                 </div>
                 <div>
-                   <div className="h-10 border-b-2 border-black w-3/4 mx-auto mb-2 italic flex items-end justify-center text-xl text-[#0f3460] font-serif lowercase">H. Baylor</div>
+                   <div className="h-10 border-b-2 border-black w-3/4 mx-auto mb-2 italic flex items-end justify-center text-xl text-[#0f3460] font-serif">
+                      <EditableField value={settings.headteacherName} onSave={v => onSettingsChange({...settings, headteacherName: v})} className="text-center" />
+                   </div>
                    Headteacher
                 </div>
              </div>

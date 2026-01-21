@@ -8,7 +8,6 @@ interface Props {
   settings: GlobalSettings;
   onSettingsChange: (s: GlobalSettings) => void;
   notify: any;
-  // Added students to prop interface to resolve data access issues
   students: Student[];
 }
 
@@ -34,8 +33,6 @@ const AnnouncementModule: React.FC<Props> = ({ settings, onSettingsChange, notif
     }
     
     if (form.targetAudience === 'Parents' || form.targetAudience === 'All' || form.targetAudience === 'Specific Class') {
-      // Fix: Use form.targetAudience instead of settings.targetAudience which doesn't exist.
-      // Also used the students prop instead of unsafe (settings as any).students
       const parentPool = form.targetAudience === 'Specific Class' 
         ? students?.filter((s: Student) => s.currentClass === form.targetClass && s.status === 'Admitted')
         : students?.filter((s: Student) => s.status === 'Admitted');
@@ -50,7 +47,6 @@ const AnnouncementModule: React.FC<Props> = ({ settings, onSettingsChange, notif
     }
 
     return list;
-    // Updated dependencies to include students
   }, [form.targetAudience, form.targetClass, settings, students]);
 
   const handleCreate = () => {
@@ -86,14 +82,9 @@ const AnnouncementModule: React.FC<Props> = ({ settings, onSettingsChange, notif
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-4 no-print">
-        <EditableField value={settings.schoolName} onSave={v => onSettingsChange({...settings, schoolName: v})} className="text-5xl font-black text-[#0f3460] uppercase tracking-tighter" />
-        <EditableField value={settings.motto} onSave={v => onSettingsChange({...settings, motto: v})} className="text-[10px] font-black uppercase tracking-[0.4em] text-[#cca43b]" />
-      </div>
-
-      <div className="bg-[#0f3460] p-8 rounded-[3rem] text-white flex justify-between items-center shadow-xl no-print">
+      <div className="bg-[#0f3460] p-8 rounded-[2rem] text-white flex justify-between items-center shadow-xl no-print">
         <div>
-          <h2 className="text-3xl font-black uppercase tracking-tighter">Communications Desk</h2>
+          <h2 className="text-2xl font-black uppercase tracking-tighter">Communications Desk</h2>
           <p className="text-[10px] font-bold text-[#cca43b] uppercase tracking-widest mt-1 italic">Contact Registry Synchronized Broadcast Tool</p>
         </div>
         <div className="flex bg-white/10 p-1.5 rounded-2xl gap-2">
@@ -198,7 +189,7 @@ const AnnouncementModule: React.FC<Props> = ({ settings, onSettingsChange, notif
           </div>
         ) : (
           <div className="space-y-10 animate-fadeIn">
-             {/* Archive section logic */}
+             <p className="p-20 text-center text-gray-300 font-black uppercase italic tracking-widest leading-relaxed">No historic broadcasts detected in current cycle.</p>
           </div>
         )}
       </div>
