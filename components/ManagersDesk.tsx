@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { GlobalSettings, Student } from '../types';
 import StaffManagement from './StaffManagement';
@@ -17,6 +18,10 @@ interface Props {
 
 const ManagersDesk: React.FC<Props> = ({ settings, onSettingsChange, students, notify, onStudentsUpdate, activeTabGlobal, activeClassGlobal }) => {
   const [activeTab, setActiveTab] = useState<'kpis' | 'assess' | 'approval' | 'rewards' | 'logistics' | 'staff'>('kpis');
+
+  const goToHub = () => {
+    window.dispatchEvent(new CustomEvent('uba-goto-hub'));
+  };
 
   const financialStats = useMemo(() => {
     let totalRevenue = 0;
@@ -67,7 +72,15 @@ const ManagersDesk: React.FC<Props> = ({ settings, onSettingsChange, students, n
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8 animate-fadeIn relative">
+      {/* Academy Hub Quick Link */}
+      <button 
+        onClick={goToHub}
+        className="no-print absolute top-8 left-8 bg-[#0f3460] text-white px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-2xl hover:scale-105 transition-all z-20 border border-white/10"
+      >
+        🏢 [1] ACADEMY HUB
+      </button>
+
       <div className="bg-white p-12 rounded-[5rem] shadow-2xl border border-gray-100 no-print flex flex-col items-center">
         <div className="bg-[#cca43b] text-[#0f3460] py-3 px-16 rounded-full font-black text-sm uppercase tracking-[0.3em] shadow-lg mb-8">
            EXECUTIVE MANAGEMENT CONSOLE

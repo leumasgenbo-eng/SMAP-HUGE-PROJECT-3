@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { GlobalSettings } from '../../types';
 import EditableField from '../EditableField';
@@ -10,14 +11,26 @@ interface Props {
 }
 
 const UniversalReportHeader: React.FC<Props> = ({ settings, onSettingsChange, title, className = "" }) => {
+  const goToHub = () => {
+    window.dispatchEvent(new CustomEvent('uba-goto-hub'));
+  };
+
   return (
-    <div className={`text-center border-b-4 border-black pb-8 mb-8 flex flex-col items-center ${className}`}>
+    <div className={`text-center border-b-4 border-black pb-8 mb-8 flex flex-col items-center relative ${className}`}>
+      {/* Academy Management Hub Shortcut */}
+      <button 
+        onClick={goToHub}
+        className="no-print absolute top-0 left-0 bg-[#0f3460] text-white px-4 py-2 rounded-xl font-black text-[9px] uppercase shadow-lg hover:scale-105 transition-all z-10 flex items-center gap-2 border border-white/10"
+      >
+        <span>🏢</span> [1] ACADEMY HUB
+      </button>
+
       <div className="flex items-center gap-6 mb-4">
         <div className="w-24 h-24 bg-gray-50 rounded-2xl border-2 border-gray-100 flex items-center justify-center overflow-hidden group relative no-print">
            {settings.logo ? (
              <img src={settings.logo} className="w-full h-full object-contain" alt="Logo" />
            ) : (
-             <span className="text-4xl opacity-10">📷</span>
+             <span className="text-4xl opacity-10">🏫</span>
            )}
            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <EditableField 
@@ -53,9 +66,11 @@ const UniversalReportHeader: React.FC<Props> = ({ settings, onSettingsChange, ti
         />
         <div className="flex justify-center gap-6 text-[10px] font-black text-gray-400 mt-2 bg-gray-50 px-6 py-1.5 rounded-full border border-gray-100 no-print">
            <div className="flex items-center gap-1">
+             <span className="text-[#cca43b]">📞</span>
              <EditableField value={settings.telephone} onSave={v => onSettingsChange({...settings, telephone: v})} placeholder="Telephone" />
            </div>
            <div className="flex items-center gap-1">
+             <span className="text-[#cca43b]">✉️</span>
              <EditableField value={settings.email} onSave={v => onSettingsChange({...settings, email: v})} placeholder="Email" className="lowercase" />
            </div>
         </div>

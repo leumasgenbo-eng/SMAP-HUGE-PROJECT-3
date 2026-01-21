@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { ROLES, DEPARTMENTS, CLASS_MAPPING, CALENDAR_ACTIVITIES, LEAD_TEAM, EXTRA_CURRICULAR, TLMS, REMARKS_LIST, DAYCARE_ACTIVITY_GROUPS, EC_DEFAULT_GRADES, STANDARD_CLASS_RULES, getSubjectsForDepartment } from './constants';
 import AdminDashboard from './components/AdminDashboard';
@@ -8,7 +9,7 @@ import AcademicDesk from './components/AcademicDesk';
 import { GlobalSettings, Student, CloudSyncLog } from './types';
 
 const App: React.FC = () => {
-  const [activeModule, setActiveModule] = useState('Academic Desk');
+  const [activeModule, setActiveModule] = useState('[1] ACADEMY HUB');
   const [activeTab, setActiveTab] = useState('Lower');
   const [activeClass, setActiveClass] = useState('Basic 1A');
   const [isSyncing, setIsSyncing] = useState(false);
@@ -21,14 +22,14 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<GlobalSettings>(() => {
     const saved = localStorage.getItem('uba_settings');
     const defaultSettings: GlobalSettings = {
-      schoolName: '',
-      address: '',
-      motto: '',
-      email: '',
-      telephone: '',
+      schoolName: 'UNITED BAYLOR ACADEMY',
+      address: 'POST OFFICE BOX AN 1234, ACCRA-GHANA',
+      motto: 'KNOWLEDGE IS THE LIGHT OF THE SOUL',
+      email: 'info@unitedbaylor.edu.gh',
+      telephone: '+233 24 350 4091',
       logo: '', currentTerm: 1, academicYear: '2024/2025',
       mockSeries: 'MOCK TWO', examStart: '2025-06-01', examEnd: '2025-06-15',
-      reopeningDate: '2025-09-08', headteacherName: '', totalAttendance: 85,
+      reopeningDate: '2025-09-08', headteacherName: 'ACADEMY DIRECTOR', totalAttendance: 85,
       punctualityThreshold: '08:00', modulePermissions: {}, academicCalendar: {},
       daycareTimeTable: {}, examTimeTables: {}, classTimeTables: {}, timeTableStructures: {},
       invigilators: [], observers: [], staff: [], staffIdLogs: [], transactionAuditLogs: [],
@@ -81,6 +82,12 @@ const App: React.FC = () => {
     localStorage.setItem('uba_settings', JSON.stringify(settings));
   }, [students, settings]);
 
+  useEffect(() => {
+    const handleNav = () => setActiveModule('[1] ACADEMY HUB');
+    window.addEventListener('uba-goto-hub', handleNav);
+    return () => window.removeEventListener('uba-goto-hub', handleNav);
+  }, []);
+
   const handleSync = async () => {
     setIsSyncing(true);
     setTimeout(() => {
@@ -94,27 +101,26 @@ const App: React.FC = () => {
     setStudents(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
-  const needsDepartment = !['Administrator', 'Admin Dashboard', 'Managers Desk', 'Finance Desk'].includes(activeModule);
-  const needsClass = !['Administrator', 'Admin Dashboard', 'Managers Desk', 'Finance Desk'].includes(activeModule);
+  const needsDepartment = !['Administrator', '[1] ACADEMY HUB', 'Managers Desk', 'Finance Desk'].includes(activeModule);
+  const needsClass = !['Administrator', '[1] ACADEMY HUB', 'Managers Desk', 'Finance Desk'].includes(activeModule);
 
   return (
     <div className="flex flex-col h-screen bg-[#f4f6f7] overflow-hidden font-sans">
       <header className="no-print bg-[#0f3460] text-white p-3 md:p-4 shadow-xl flex justify-between items-center z-50 border-b-4 border-[#cca43b]">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-2xl flex items-center justify-center border-2 border-[#cca43b] shadow-lg overflow-hidden flex-shrink-0">
-             {settings.logo ? <img src={settings.logo} className="w-full h-full object-contain" /> : <span className="text-xl md:text-2xl opacity-20">⚓</span>}
+             {settings.logo ? <img src={settings.logo} className="w-full h-full object-contain" /> : <span className="text-xl md:text-2xl opacity-20">🏫</span>}
           </div>
           <div className="flex flex-col">
-            <span className="font-black text-sm md:text-xl tracking-tighter uppercase">{settings.schoolName || 'UBA ECOSYSTEM'}</span>
+            <span className="font-black text-sm md:text-xl tracking-tighter uppercase">{settings.schoolName || 'UNITED BAYLOR ACADEMY'}</span>
             <div className="flex items-center gap-2">
-               <span className="text-[7px] md:text-[9px] uppercase font-bold text-[#cca43b] tracking-[0.2em]">{settings.motto || 'SYSTEM TERMINAL'}</span>
+               <span className="text-[7px] md:text-[9px] uppercase font-bold text-[#cca43b] tracking-[0.2em]">{settings.motto || 'KNOWLEDGE IS LIGHT'}</span>
             </div>
           </div>
         </div>
         
         <div className="flex flex-wrap items-center gap-2 justify-end">
-          <button onClick={() => setActiveModule('Administrator')} className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg transition-all ${activeModule === 'Administrator' ? 'bg-white text-[#0f3460] scale-105' : 'bg-white/10 text-white border border-white/10 hover:bg-white/20'}`}>Administrator</button>
-          <button onClick={() => setActiveModule('Admin Dashboard')} className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg transition-all ${activeModule === 'Admin Dashboard' ? 'bg-[#cca43b] text-[#0f3460] scale-105' : 'bg-white/10 text-white border border-white/10 hover:bg-white/20'}`}>System Admin</button>
+          <button onClick={() => setActiveModule('[1] ACADEMY HUB')} className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg transition-all ${activeModule === '[1] ACADEMY HUB' ? 'bg-[#cca43b] text-[#0f3460] scale-105' : 'bg-white/10 text-white border border-white/10 hover:bg-white/20'}`}>[1] ACADEMY HUB</button>
           <button onClick={() => setActiveModule('Managers Desk')} className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg transition-all ${activeModule === 'Managers Desk' ? 'bg-[#cca43b] text-[#0f3460] scale-105' : 'bg-white/10 text-white border border-white/10 hover:bg-white/20'}`}>Managers Desk</button>
           <button onClick={() => setActiveModule('Finance Desk')} className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg transition-all ${activeModule === 'Finance Desk' ? 'bg-[#cca43b] text-[#0f3460] scale-105' : 'bg-white/10 text-white border border-white/10 hover:bg-white/20'}`}>Finance Desk</button>
           <button onClick={() => setActiveModule('Academic Desk')} className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg transition-all ${activeModule === 'Academic Desk' ? 'bg-[#cca43b] text-[#0f3460] scale-105' : 'bg-white/10 text-white border border-white/10 hover:bg-white/20'}`}>Academic Desk</button>
@@ -160,10 +166,11 @@ const App: React.FC = () => {
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8 relative">
         <div className="max-w-screen-2xl mx-auto pb-20">
-          {activeModule === 'Administrator' ? (
-            <AdministratorPanel settings={settings} onSettingsChange={setSettings} notify={console.log} students={students} onStudentsUpdate={setSettings} activeTabGlobal={activeTab} activeClassGlobal={activeClass} />
-          ) : activeModule === 'Admin Dashboard' ? (
+          {activeModule === '[1] ACADEMY HUB' ? (
             <AdminDashboard section="Main" dept={activeTab} notify={console.log} settings={settings} onSettingsChange={setSettings} students={students} onStudentsUpdate={setStudents} />
+          ) : activeModule === 'Administrator' ? (
+            /* Fix: Corrected onStudentsUpdate prop from setSettings to setStudents to resolve type mismatch (line 172) */
+            <AdministratorPanel settings={settings} onSettingsChange={setSettings} notify={console.log} students={students} onStudentsUpdate={setStudents} activeTabGlobal={activeTab} activeClassGlobal={activeClass} />
           ) : activeModule === 'Managers Desk' ? (
             <ManagersDesk settings={settings} onSettingsChange={setSettings} students={students} onStudentsUpdate={setStudents} notify={console.log} activeTabGlobal={activeTab} activeClassGlobal={activeClass} />
           ) : activeModule === 'Finance Desk' ? (
@@ -172,7 +179,7 @@ const App: React.FC = () => {
             <AcademicDesk settings={settings} onSettingsChange={setSettings} students={students} onStudentsUpdate={setStudents} activeClass={activeClass} department={activeTab} notify={console.log} onStudentUpdate={handleStudentUpdate} />
           ) : (
             <div className="p-20 text-center opacity-40">
-                <span className="text-4xl">⚓</span>
+                <span className="text-4xl">🏢</span>
                 <p className="mt-4 font-black uppercase text-xs">Module Operational: {activeModule}</p>
             </div>
           )}
