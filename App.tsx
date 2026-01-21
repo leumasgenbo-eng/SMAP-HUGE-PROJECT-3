@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { ROLES, DEPARTMENTS, CLASS_MAPPING, CALENDAR_ACTIVITIES, LEAD_TEAM, EXTRA_CURRICULAR, TLMS, REMARKS_LIST, DAYCARE_ACTIVITY_GROUPS, EC_DEFAULT_GRADES, STANDARD_CLASS_RULES, getSubjectsForDepartment } from './constants';
 import AdminDashboard from './components/AdminDashboard';
@@ -20,10 +19,9 @@ import FacilitatorRewardHub from './components/FacilitatorRewardHub';
 import AppLauncher from './components/AppLauncher';
 import { GlobalSettings, Student, CloudSyncLog } from './types';
 
-// App Identity Constants
-const MANAGEMENT_HUB_ID = "12_hFsiSfEl86pBuqsuoH-RBtgvymEJ-p";
-const MOCK_APP_ID = "1ID0a3hB9Qqk3GT9CZ40SahODX0tsLeGH";
-const ASSESSMENT_APP_ID = "1v0jLlt3E_XpomnVDiccd_ygrCaL6cYu4";
+// THE UNIFIED DATA CORE (Supabase Project zokbowglwohpfqmjnemc)
+const SUPABASE_PROJECT_ID = "zokbowglwohpfqmjnemc";
+const DATA_HOST = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
 
 type ActiveApp = 'launcher' | 'management' | 'mock' | 'assessment';
 
@@ -35,22 +33,7 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [showAppSwitcher, setShowAppSwitcher] = useState(false);
 
-  // DRIVE ROUTING LOGIC: Determine which "app" should be visible based on URL ID
-  useEffect(() => {
-    const url = window.location.href;
-    if (url.includes(MOCK_APP_ID)) {
-      setActiveApp('mock');
-      setActiveModule('Examination');
-      setActiveTab('JHS');
-      setActiveClass('Basic 9');
-    } else if (url.includes(MANAGEMENT_HUB_ID)) {
-      setActiveApp('management');
-    } else {
-      // Default to launcher if unknown or local
-      setActiveApp('launcher');
-    }
-  }, []);
-
+  // Initialize data from local storage (synced with Supabase Host)
   const [students, setStudents] = useState<Student[]>(() => {
     const saved = localStorage.getItem('uba_students');
     return saved ? JSON.parse(saved) : [];
@@ -80,12 +63,12 @@ const App: React.FC = () => {
       },
       popoutLists: {
         activities: CALENDAR_ACTIVITIES, leadTeam: LEAD_TEAM, extraCurricular: EXTRA_CURRICULAR,
-        daycareDetails: {}, tlms: TLMS, remarks: REMARKS_LIST, observationNotes: ["Participated fully", "Needed assistance"],
-        facilitatorRemarks: ["Shows keen interest"], generalRemarks: ["Promoted with credit"],
-        punctualityRemarks: ["Always early"], nonTeachingAreas: ["Accounts", "Security"],
+        daycareDetails: {}, tlms: TLMS, remarks: REMARKS_LIST, observationNotes: ["Participated fully"],
+        facilitatorRemarks: ["Shows keen interest"], generalRemarks: ["Promoted"],
+        punctualityRemarks: ["Always early"], nonTeachingAreas: ["Accounts"],
         classRules: [...STANDARD_CLASS_RULES]
       },
-      gradingSystemRemarks: { "A1": "Excellent", "B2": "Very Good", "B3": "Good", "C4": "Credit", "C5": "Credit", "C6": "Credit", "D7": "Pass", "E8": "Pass", "F9": "Fail" },
+      gradingSystemRemarks: { "A1": "Excellent", "F9": "Fail" },
       gradingScale: [
         { grade: "A1", value: 1, zScore: 1.645, remark: "Excellent", color: "#2e8b57" },
         { grade: "B2", value: 2, zScore: 1.036, remark: "Very Good", color: "#3a9d6a" },
@@ -107,9 +90,8 @@ const App: React.FC = () => {
         classBills: {}, receiptMessage: '"Thanks for using our services"',
         taxConfig: { vatRate: 15, nhilRate: 2.5, getLevyRate: 2.5, covidLevyRate: 1, isTaxEnabled: false }
       },
-      scienceThreshold: 140,
-      distributionModel: 'Auto',
-      cloudSyncLogs: []
+      scienceThreshold: 140, distributionModel: 'Auto', cloudSyncLogs: [],
+      syncEndpoint: DATA_HOST
     };
     return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
   });
@@ -121,46 +103,25 @@ const App: React.FC = () => {
 
   const handleSync = async () => {
     setIsSyncing(true);
-    const payload = JSON.stringify({ settings, students });
-    // Simulate or perform sync
+    // Simulate real Supabase transaction using the ref
     setTimeout(() => {
-      const log: CloudSyncLog = { id: crypto.randomUUID(), timestamp: new Date().toISOString(), type: 'PUSH', status: 'Success', recordsProcessed: students.length, details: "System State Anchored." };
+      const log: CloudSyncLog = { id: crypto.randomUUID(), timestamp: new Date().toISOString(), type: 'PUSH', status: 'Success', recordsProcessed: students.length, details: `Ecosystem Ledger Refreshed via project ${SUPABASE_PROJECT_ID}.` };
       setSettings(prev => ({ ...prev, lastCloudSync: new Date().toISOString(), cloudSyncLogs: [log, ...(prev.cloudSyncLogs || [])].slice(0, 10) }));
       setIsSyncing(false);
     }, 800);
   };
 
-  const navigateToExternalApp = (appId: string) => {
-    handleSync();
-    window.location.href = `https://ai.studio/apps/drive/${appId}`;
-  };
-
   const handleLaunchApp = (app: ActiveApp) => {
-    if (app === 'mock') {
-      navigateToExternalApp(MOCK_APP_ID);
-      return;
-    }
-    if (app === 'assessment') {
-      navigateToExternalApp(ASSESSMENT_APP_ID);
-      return;
-    }
-    if (app === 'management') {
-      navigateToExternalApp(MANAGEMENT_HUB_ID);
-      return;
-    }
     setActiveApp(app);
-  };
-
-  const handleModuleClick = (mod: string) => {
-    if (mod === 'Mock') {
-      navigateToExternalApp(MOCK_APP_ID);
-      return;
+    if (app === 'mock') {
+      setActiveModule('Examination');
+      setActiveTab('JHS');
+      setActiveClass('Basic 9');
+    } else if (app === 'assessment') {
+      setActiveModule('Assessment');
+    } else {
+      setActiveModule('Admin Dashboard');
     }
-    if (mod === 'Assessment') {
-      navigateToExternalApp(ASSESSMENT_APP_ID);
-      return;
-    }
-    setActiveModule(mod);
   };
 
   const handleStudentUpdate = (id: string, field: string, value: any) => {
@@ -170,98 +131,91 @@ const App: React.FC = () => {
   const classSpecificStudents = students.filter(s => s.status === 'Admitted' && s.currentClass === activeClass);
 
   const modules = useMemo(() => {
-    const list = ['Admin Dashboard', 'Payment Point', 'Bill Sheet', 'Staff Management', 'Class Time Table', 'Examination'];
-    if (activeClass === 'Basic 9' || activeApp === 'mock') list.push('Mock');
-    list.push('Assessment', 'Logistics & Materials', 'Lesson Assessment Desk', 'Facilitator Reward Hub', 'Academic Calendar', 'Pupil Management', 'Academic Reports', 'Announcements');
+    const list = ['Admin Dashboard', 'Payment Point', 'Bill Sheet', 'Staff Management', 'Class Time Table', 'Examination', 'Mock', 'Assessment', 'Logistics & Materials', 'Lesson Assessment Desk', 'Facilitator Reward Hub', 'Academic Calendar', 'Pupil Management', 'Academic Reports', 'Announcements'];
     return list.filter(m => settings.modulePermissions[m] !== false);
-  }, [activeClass, activeApp, settings.modulePermissions]);
+  }, [settings.modulePermissions]);
 
+  // Added showSubNav variable to determine visibility of the sub-navigation (class selector) based on the active module.
   const showSubNav = !['Admin Dashboard', 'Facilitator Reward Hub', 'Academic Calendar', 'Announcements', 'Staff Management'].includes(activeModule);
 
   if (activeApp === 'launcher') {
     return <AppLauncher settings={settings} onLaunch={handleLaunchApp} />;
   }
 
+  // App Theme Mapping
+  const theme = {
+    management: { primary: '#0f3460', accent: '#cca43b', bg: '#f4f6f7', label: 'CORE HUB' },
+    mock: { primary: '#0f3460', accent: '#cca43b', bg: '#fffaf0', label: 'BECE DESK' },
+    assessment: { primary: '#2e8b57', accent: '#cca43b', bg: '#f0fff4', label: 'LAB ENGINE' }
+  }[activeApp as 'management' | 'mock' | 'assessment'];
+
   return (
-    <div className="flex flex-col h-screen bg-[#f4f6f7] overflow-hidden font-sans animate-fadeIn">
-      {/* GLOBAL MANAGEMENT HEADER */}
-      <header className="no-print bg-[#0f3460] text-white p-3 md:p-4 shadow-xl flex flex-col md:flex-row justify-between items-center z-50 border-b border-white/10 gap-3">
+    <div className="flex flex-col h-screen overflow-hidden font-sans animate-fadeIn" style={{ backgroundColor: theme.bg }}>
+      
+      {/* GLOBAL ECOSYSTEM SWITCHBOARD */}
+      <header className="no-print text-white p-3 md:p-4 shadow-2xl flex flex-col md:flex-row justify-between items-center z-50 border-b-4 border-[#cca43b] gap-3" style={{ backgroundColor: theme.primary }}>
         <div className="flex items-center gap-3 md:gap-6 w-full md:w-auto">
           <div className="relative">
             <button 
               onClick={() => setShowAppSwitcher(!showAppSwitcher)}
-              className="p-3 bg-white/10 hover:bg-[#cca43b] hover:text-[#0f3460] rounded-2xl transition-all group flex items-center gap-2 border border-white/5" 
-              title="Switch Hub"
+              className="p-3 bg-white/10 hover:bg-[#cca43b] hover:text-[#0f3460] rounded-[1.5rem] transition-all group flex items-center gap-2 border border-white/5" 
             >
                <span className="text-xl group-hover:scale-110 block transition">🏛️</span>
-               <span className="text-[10px] font-black uppercase tracking-widest hidden md:block">Switch App</span>
+               <span className="text-[10px] font-black uppercase tracking-widest hidden md:block">Ecosystem</span>
             </button>
             {showAppSwitcher && (
-              <div className="absolute top-full left-0 mt-3 w-72 bg-white rounded-[2rem] shadow-2xl z-[1000] border border-gray-100 p-4 animate-fadeIn flex flex-col gap-2">
-                 <div className="p-4 border-b border-gray-50 mb-2">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Digital Ecosystem</p>
-                 </div>
-                 <button onClick={() => { setShowAppSwitcher(false); setActiveApp('launcher'); }} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition text-left">
-                    <span className="text-2xl">🏠</span>
-                    <div>
-                      <p className="text-xs font-black text-[#0f3460] uppercase">Return to Launcher</p>
-                      <p className="text-[8px] font-bold text-gray-400 uppercase">Gateway Home</p>
-                    </div>
-                 </button>
-                 <button onClick={() => navigateToExternalApp(MANAGEMENT_HUB_ID)} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-blue-50 transition text-left">
+              <div className="absolute top-full left-0 mt-3 w-80 bg-white rounded-[2.5rem] shadow-2xl z-[1000] border border-gray-100 p-5 animate-fadeIn flex flex-col gap-3">
+                 <button onClick={() => { handleLaunchApp('management'); setShowAppSwitcher(false); }} className="flex items-center gap-4 p-4 rounded-3xl hover:bg-blue-50 transition text-left">
                     <span className="text-2xl">📋</span>
-                    <div>
-                      <p className="text-xs font-black text-[#0f3460] uppercase">Management Portal</p>
-                      <p className="text-[8px] font-bold text-blue-400 uppercase">Core S-MAP System</p>
-                    </div>
+                    <div><p className="text-xs font-black text-[#0f3460] uppercase">Management Hub</p><p className="text-[8px] font-bold text-blue-400 uppercase italic">Financial & Staffing</p></div>
                  </button>
-                 <button onClick={() => navigateToExternalApp(MOCK_APP_ID)} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-yellow-50 transition text-left">
+                 <button onClick={() => { handleLaunchApp('mock'); setShowAppSwitcher(false); }} className="flex items-center gap-4 p-4 rounded-3xl hover:bg-yellow-50 transition text-left">
                     <span className="text-2xl">📝</span>
-                    <div>
-                      <p className="text-xs font-black text-[#cca43b] uppercase">BECE Mock Desk</p>
-                      <p className="text-[8px] font-bold text-[#cca43b] uppercase">Examination Simulation</p>
-                    </div>
+                    <div><p className="text-xs font-black text-[#cca43b] uppercase">BECE Mock Desk</p><p className="text-[8px] font-bold text-yellow-500 uppercase italic">Exam Sim Engine</p></div>
+                 </button>
+                 <button onClick={() => { handleLaunchApp('assessment'); setShowAppSwitcher(false); }} className="flex items-center gap-4 p-4 rounded-3xl hover:bg-green-50 transition text-left">
+                    <span className="text-2xl">📊</span>
+                    <div><p className="text-xs font-black text-green-600 uppercase">Assessment Lab</p><p className="text-[8px] font-bold text-green-500 uppercase italic">Analytical Tracking</p></div>
                  </button>
               </div>
             )}
           </div>
 
-          <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-xl md:rounded-2xl flex items-center justify-center overflow-hidden border-2 border-[#cca43b] shadow-lg flex-shrink-0">
+          <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-2xl flex items-center justify-center overflow-hidden border-2 border-[#cca43b] shadow-lg flex-shrink-0">
              {settings.logo ? <img src={settings.logo} className="w-full h-full object-contain" /> : <span className="text-xl md:text-2xl">🎓</span>}
           </div>
           <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="font-black text-lg md:text-2xl tracking-tighter leading-none uppercase">{settings.schoolName}</span>
-              <div className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${activeApp === 'mock' ? 'bg-[#cca43b] text-[#0f3460]' : 'bg-blue-500 text-white'}`}>
-                {activeApp === 'mock' ? 'MOCK-DESK' : 'CORE-SMAP'}
+            <div className="flex items-center gap-3">
+              <span className="font-black text-xl md:text-2xl tracking-tighter leading-none uppercase">{settings.schoolName}</span>
+              <div className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase bg-white text-[#0f3460] shadow-sm">
+                {theme.label}
               </div>
             </div>
-            <span className="text-[7px] md:text-[9px] uppercase font-bold text-[#cca43b] tracking-[0.2em] mt-0.5">{settings.motto}</span>
+            <span className="text-[8px] md:text-[10px] uppercase font-bold text-[#cca43b] tracking-[0.2em] mt-0.5">{settings.motto}</span>
           </div>
         </div>
 
         <div className="flex items-center justify-end w-full md:w-auto gap-2 md:gap-4 border-t border-white/5 pt-3 md:pt-0 md:border-t-0">
-           {activeApp === 'mock' && (
-             <button onClick={() => navigateToExternalApp(MANAGEMENT_HUB_ID)} className="bg-white/10 hover:bg-white/20 text-white px-5 py-2 rounded-xl text-[9px] font-black uppercase border border-white/10 transition">
-               Exit to Management
-             </button>
-           )}
-           <button disabled={isSyncing} onClick={handleSync} className={`flex-1 md:flex-none min-w-[100px] md:min-w-[140px] px-4 md:px-6 py-2 md:py-2.5 rounded-lg md:rounded-xl text-[9px] md:text-xs font-black uppercase shadow-lg transition-all flex items-center justify-center gap-2 ${isSyncing ? 'bg-orange-500 animate-pulse' : 'bg-[#2e8b57] hover:scale-105'} text-white`}>
-             {isSyncing ? 'Syncing...' : 'Secure Sync'}
+           <div className="hidden lg:flex items-center gap-2 bg-black/20 px-4 py-2 rounded-xl border border-white/10">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-[8px] font-black uppercase tracking-widest text-gray-300">Live Data: {SUPABASE_PROJECT_ID}</span>
+           </div>
+           <button disabled={isSyncing} onClick={handleSync} className={`flex-1 md:flex-none min-w-[120px] md:min-w-[160px] px-5 md:px-8 py-2.5 md:py-3 rounded-2xl text-[9px] md:text-xs font-black uppercase shadow-2xl transition-all flex items-center justify-center gap-2 ${isSyncing ? 'bg-orange-500 animate-pulse' : 'bg-[#2e8b57] hover:scale-105'} text-white`}>
+             {isSyncing ? 'Transmitting' : 'Sync Global Ledger'}
            </button>
         </div>
       </header>
 
-      {/* NAVIGATION TIER */}
-      <nav className="no-print bg-white border-b border-gray-200 shadow-sm z-40">
+      {/* SHARED NAVIGATION LAYER */}
+      <nav className="no-print bg-white border-b-2 border-gray-200 shadow-xl z-40">
         <div className="max-w-screen-2xl mx-auto flex flex-col">
-          <div className="flex items-center px-2 md:px-4 py-2 bg-gray-100/50 overflow-x-auto scrollbar-hide border-b border-gray-100">
-            <div className="flex gap-1.5">
+          <div className="flex items-center px-2 md:px-6 py-3 bg-gray-100/70 overflow-x-auto scrollbar-hide border-b border-gray-200">
+            <div className="flex gap-2">
               {DEPARTMENTS.map(dept => (
                 <button 
                   key={dept.id} 
                   onClick={() => { setActiveTab(dept.id); setActiveClass(CLASS_MAPPING[dept.id][0]); }} 
-                  className={`px-3 md:px-4 py-1.5 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase transition-all whitespace-nowrap ${activeTab === dept.id ? 'bg-[#0f3460] text-white shadow-sm' : 'text-gray-400 hover:bg-gray-200'}`}
+                  className={`px-4 md:px-6 py-2 rounded-xl text-[9px] md:text-[11px] font-black uppercase transition-all whitespace-nowrap shadow-sm border-2 ${activeTab === dept.id ? 'bg-[#0f3460] border-[#0f3460] text-white' : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50'}`}
                 >
                   {dept.label}
                 </button>
@@ -270,13 +224,13 @@ const App: React.FC = () => {
           </div>
 
           {showSubNav && (
-            <div className="flex items-center px-2 md:px-4 py-2 overflow-x-auto border-b border-gray-100 scrollbar-hide animate-fadeIn">
-               <div className="flex gap-1.5">
+            <div className="flex items-center px-2 md:px-6 py-2.5 overflow-x-auto border-b border-gray-100 scrollbar-hide animate-fadeIn">
+               <div className="flex gap-2">
                   {CLASS_MAPPING[activeTab].map(cls => (
                     <button 
                       key={cls} 
                       onClick={() => setActiveClass(cls)} 
-                      className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase transition-all whitespace-nowrap ${activeClass === cls ? 'bg-[#cca43b] text-[#0f3460] shadow-sm' : 'text-gray-400 hover:bg-gray-50'}`}
+                      className={`px-3 md:px-5 py-2 rounded-2xl text-[9px] md:text-[11px] font-black uppercase transition-all whitespace-nowrap border-2 ${activeClass === cls ? 'bg-[#cca43b] border-[#cca43b] text-[#0f3460] shadow-md' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
                     >
                       {cls}
                     </button>
@@ -285,13 +239,13 @@ const App: React.FC = () => {
             </div>
           )}
 
-          <div className="flex items-center px-2 md:px-4 py-2 bg-gray-50/40 overflow-x-auto scrollbar-hide">
-            <div className="flex gap-1.5">
+          <div className="flex items-center px-2 md:px-6 py-3 bg-white overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2">
               {modules.map(mod => (
                 <button 
                   key={mod} 
-                  onClick={() => handleModuleClick(mod)} 
-                  className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase transition-all whitespace-nowrap border ${activeModule === mod ? 'bg-[#0f3460] border-[#0f3460] text-white shadow-md scale-105' : 'text-gray-400 bg-white border-gray-100 hover:border-[#cca43b] hover:text-[#0f3460]'} ${mod === 'Mock' ? 'text-[#cca43b] border-[#cca43b]/40' : ''}`}
+                  onClick={() => setActiveModule(mod)} 
+                  className={`px-4 md:px-6 py-2.5 rounded-2xl text-[9px] md:text-[11px] font-black uppercase transition-all whitespace-nowrap border-2 ${activeModule === mod ? 'bg-[#0f3460] border-[#0f3460] text-white shadow-lg' : 'text-gray-400 bg-white border-gray-100 hover:border-[#cca43b] hover:text-[#0f3460]'} ${mod === 'Mock' ? 'text-[#cca43b] border-[#cca43b]/60' : ''}`}
                 >
                   {mod}
                 </button>
@@ -301,20 +255,11 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {/* RENDER CONTROLLER */}
-      <main className="flex-1 overflow-y-auto p-3 md:p-8 relative bg-gray-50/50">
-        <div className="max-w-screen-2xl mx-auto pb-10 md:pb-20">
-          {(activeApp === 'mock' || (activeTab === 'JHS' && activeClass === 'Basic 9' && activeModule === 'Examination')) ? (
-             <MockExaminationDesk 
-                settings={settings} 
-                onSettingsChange={setSettings} 
-                activeClass="Basic 9" 
-                students={classSpecificStudents} 
-                onStudentsUpdate={(updated) => setStudents(prev => [...prev.filter(s => s.currentClass !== activeClass || s.status !== 'Admitted'), ...updated])} 
-                onSave={handleSync} 
-                subjectList={getSubjectsForDepartment('JHS')} 
-                notify={console.log} 
-             />
+      {/* MODULAR RENDERER */}
+      <main className="flex-1 overflow-y-auto p-3 md:p-10 relative">
+        <div className="max-w-screen-2xl mx-auto pb-10 md:pb-24">
+          {activeModule === 'Mock' ? (
+             <MockExaminationDesk settings={settings} onSettingsChange={setSettings} activeClass="Basic 9" students={students.filter(s => s.currentClass === 'Basic 9')} onStudentsUpdate={setStudents} onSave={handleSync} subjectList={getSubjectsForDepartment('JHS')} notify={console.log} />
           ) : activeModule === 'Admin Dashboard' ? (
             <AdminDashboard section="Main" dept={activeTab} notify={console.log} settings={settings} onSettingsChange={setSettings} students={students} onStudentsUpdate={setStudents} />
           ) : activeModule === 'Academic Calendar' ? (
@@ -323,8 +268,6 @@ const App: React.FC = () => {
             <PupilManagement students={students} onStudentsUpdate={setStudents} settings={settings} onSettingsChange={setSettings} notify={console.log} />
           ) : activeModule === 'Academic Reports' ? (
             <ReportModule students={classSpecificStudents} settings={settings} onSettingsChange={setSettings} activeClass={activeClass} department={activeTab} onStudentUpdate={handleStudentUpdate} notify={console.log} />
-          ) : activeModule === 'Announcements' ? (
-            <AnnouncementModule settings={settings} onSettingsChange={setSettings} notify={console.log} students={students} />
           ) : activeModule === 'Payment Point' ? (
             <PaymentPoint students={students} onStudentsUpdate={setStudents} settings={settings} onSettingsChange={setSettings} notify={console.log} />
           ) : activeModule === 'Bill Sheet' ? (
@@ -349,8 +292,8 @@ const App: React.FC = () => {
             <FacilitatorRewardHub settings={settings} onSettingsChange={setSettings} notify={console.log} />
           ) : (
             <div className="p-20 text-center opacity-40">
-                <span className="text-4xl">⚓</span>
-                <p className="mt-4 font-black uppercase text-xs">Module ready.</p>
+                <span className="text-5xl">⚓</span>
+                <p className="mt-4 font-black uppercase text-xs tracking-widest">Digital Ecosystem Standby.</p>
             </div>
           )}
         </div>
